@@ -1,5 +1,5 @@
 <?php
-
+// 发送注册验证码请求
 namespace App\Http\Requests\LX;
 
 use App\Enums\VerifyCodeType;

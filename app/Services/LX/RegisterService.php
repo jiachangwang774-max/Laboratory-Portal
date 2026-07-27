@@ -5,7 +5,9 @@ namespace App\Services\LX;
 use App\Enums\ResponseCode;
 use App\Enums\VerifyCodeType;
 use App\Exceptions\BusinessException;
+use App\Helpers\PhoneHelper;
 use App\Mail\VerificationCodeMail;
+use App\Models\SysPasswordHistory;
 use App\Models\SysUser;
 use App\Models\VerifyCode;
 use App\Traits\LogTrait;
@@ -97,10 +99,17 @@ class RegisterService
             'username'  => $data['username'],
             'password'  => Hash::make($data['password']),
             'email'     => $data['email'],
-            'phone'     => $data['phone'],
+            'phone'     => PhoneHelper::clean($data['phone']),
             'grade'     => $data['grade'],
             'major'     => $data['major'],
             'status'    => 1,
+        ]);
+
+        // 记录初始密码到历史
+        SysPasswordHistory::create([
+            'user_id'       => $user->user_id,
+            'password_hash' => $user->password,
+            'create_time'   => now(),
         ]);
 
         // 删除已使用的验证码，防止重复使用
@@ -116,7 +125,7 @@ class RegisterService
             'userId'   => $user->user_id,
             'username' => $user->username,
             'email'    => $user->email,
-            'phone'    => $user->phone,
+            'phone'    => PhoneHelper::mask($user->phone),
             'grade'    => $user->grade,
             'major'    => $user->major,
         ];

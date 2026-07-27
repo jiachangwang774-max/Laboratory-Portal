@@ -12,12 +12,12 @@ class HomeworkSubmit extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'user_id',
-        'homework_id',
-        'submit_content',
-        'submit_file',
-        'submit_time',
-        'score',
+        'user_id',//用户ID
+        'homework_id',//作业ID
+        'submit_content',//提交内容
+        'submit_file',//提交文件
+        'submit_time',//提交时间
+        'score',//成绩
     ];
 
     /**

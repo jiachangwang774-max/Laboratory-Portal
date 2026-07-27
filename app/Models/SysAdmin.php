@@ -14,12 +14,12 @@ class SysAdmin extends Authenticatable implements JWTSubject
     public $timestamps = false;
 
     protected $fillable = [
-        'admin_name',
-        'password',
-        'real_name',
-        'phone',
-        'email',
-        'status',
+        'admin_name',//管理员名称
+        'password',//密码
+        'real_name',//真实姓名
+        'phone',//手机号
+        'email',//邮箱
+        'status',//状态
     ];
 
     protected $hidden = [

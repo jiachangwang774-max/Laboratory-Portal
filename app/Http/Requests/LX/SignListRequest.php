@@ -1,5 +1,5 @@
 <?php
-
+// 获取用户签到列表请求
 namespace App\Http\Requests\LX;
 
 use Illuminate\Foundation\Http\FormRequest;

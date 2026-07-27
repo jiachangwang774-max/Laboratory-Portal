@@ -14,15 +14,15 @@ class SysUser extends Authenticatable implements JWTSubject
     public $timestamps = false;
 
     protected $fillable = [
-        'username',
-        'password',
-        'real_name',
-        'phone',
-        'email',
-        'avatar',
-        'grade',
-        'major',
-        'status',
+        'username',//用户名
+        'password',//密码
+        'real_name',//真实姓名
+        'phone',//手机号
+        'email',//邮箱
+        'avatar',//头像
+        'grade',//年级
+        'major',//专业
+        'status',//状态
     ];
 
     protected $hidden = [

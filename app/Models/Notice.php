@@ -12,14 +12,14 @@ class Notice extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'title',
-        'content',
-        'cover',
-        'is_top',
-        'status',
-        'create_admin',
-        'create_time',
-        'update_time',
+        'title',//标题
+        'content',//内容
+        'cover',//封面
+        'is_top',//是否置顶
+        'status',//状态
+        'create_admin',//创建管理员
+        'create_time',//创建时间
+        'update_time',//更新时间
     ];
 
     /**

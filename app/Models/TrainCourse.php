@@ -12,15 +12,15 @@ class TrainCourse extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'course_name',
-        'course_desc',
-        'cover_img',
-        'start_time',
-        'end_time',
-        'max_sign',
-        'status',
-        'create_admin',
-        'create_time',
+        'course_name',//课程名称
+        'course_desc',//课程描述
+        'cover_img',//封面图片
+        'start_time',//开始时间
+        'end_time',//结束时间
+        'max_sign',//最大报名人数
+        'status',//状态
+        'create_admin',//创建人ID
+        'create_time',//创建时间
     ];
 
     /**

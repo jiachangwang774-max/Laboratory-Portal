@@ -12,14 +12,14 @@ class TrainSign extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'user_id',
-        'course_id',
-        'sign_info',
-        'audit_status',
-        'audit_admin',
-        'audit_remark',
-        'sign_time',
-        'audit_time',
+        'user_id',//用户ID
+        'course_id',//课程ID
+        'sign_info',//报名信息
+        'audit_status',//审核状态
+        'audit_admin',//审核人ID
+        'audit_remark',//审核备注
+        'sign_time',//报名时间
+        'audit_time',//审核时间
     ];
 
     /**

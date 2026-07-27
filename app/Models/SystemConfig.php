@@ -12,9 +12,9 @@ class SystemConfig extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'config_key',
-        'config_value',
-        'remark',
+        'config_key',//配置键
+        'config_value',//配置值
+        'remark',//备注
     ];
 
     /**

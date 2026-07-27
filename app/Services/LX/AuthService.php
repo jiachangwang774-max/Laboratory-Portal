@@ -4,6 +4,8 @@ namespace App\Services\LX;
 
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
+use App\Helpers\PhoneHelper;
+use App\Models\SysPasswordHistory;
 use App\Models\SysUser;
 use App\Traits\LogTrait;
 use Illuminate\Support\Facades\Hash;
@@ -142,7 +144,7 @@ class AuthService
     /**
      * 修改密码
      *
-     * 校验旧密码 → 更新为新密码
+     * 校验旧密码 → 检查历史复用 → 更新为新密码 → 记录历史
      */
     public function updatePwd(string $oldPwd, string $newPwd): void
     {
@@ -153,8 +155,15 @@ class AuthService
             throw new BusinessException('原密码错误', ResponseCode::PASSWORD_ERROR);
         }
 
-        $user->password = Hash::make($newPwd);
+        // 检查新密码是否与历史密码重复
+        $this->checkPasswordHistory($user->user_id, $newPwd);
+
+        $newHash = Hash::make($newPwd);
+        $user->password = $newHash;
         $user->save();
+
+        // 记录密码历史
+        $this->recordPasswordHistory($user->user_id, $newHash);
 
         $this->logBusiness('用户修改密码', ['user_id' => $user->user_id]);
     }
@@ -212,10 +221,58 @@ class AuthService
             'username' => $user->username,
             'realName' => $user->real_name,
             'avatar'   => $user->avatar,
-            'phone'    => $user->phone,
+            'phone'    => PhoneHelper::mask($user->phone),
             'email'    => $user->email,
             'grade'    => $user->grade,
             'major'    => $user->major,
         ];
+    }
+
+    /**
+     * 检查新密码是否与历史密码重复。
+     *
+     * 取最近 N 条历史记录逐一比对，命中则抛出异常。
+     */
+    private function checkPasswordHistory(int $userId, string $newPwd): void
+    {
+        $limit = config('password.history_limit', 5);
+
+        $histories = SysPasswordHistory::where('user_id', $userId)
+            ->orderBy('create_time', 'desc')
+            ->limit($limit)
+            ->get();
+
+        foreach ($histories as $history) {
+            if (Hash::check($newPwd, $history->password_hash)) {
+                throw new BusinessException(
+                    "新密码不能与近期使用过的 {$limit} 次密码相同",
+                    ResponseCode::BUSINESS_ERROR,
+                );
+            }
+        }
+    }
+
+    /**
+     * 记录密码到历史表，并仅保留最近 N 条。
+     */
+    private function recordPasswordHistory(int $userId, string $hash): void
+    {
+        SysPasswordHistory::create([
+            'user_id'       => $userId,
+            'password_hash' => $hash,
+            'create_time'   => now(),
+        ]);
+
+        // 仅保留最近 N 条，删除多余的旧记录
+        $limit = config('password.history_limit', 5);
+
+        $idsToKeep = SysPasswordHistory::where('user_id', $userId)
+            ->orderBy('create_time', 'desc')
+            ->limit($limit)
+            ->pluck('id');
+
+        SysPasswordHistory::where('user_id', $userId)
+            ->whereNotIn('id', $idsToKeep)
+            ->delete();
     }
 }

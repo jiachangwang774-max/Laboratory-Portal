@@ -1,5 +1,5 @@
 <?php
-
+// 删除账号请求
 namespace App\Http\Requests\LX;
 
 use Illuminate\Foundation\Http\FormRequest;

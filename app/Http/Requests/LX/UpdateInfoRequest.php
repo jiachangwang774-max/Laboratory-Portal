@@ -1,5 +1,5 @@
 <?php
-
+// 更新用户信息请求
 namespace App\Http\Requests\LX;
 
 use Illuminate\Foundation\Http\FormRequest;

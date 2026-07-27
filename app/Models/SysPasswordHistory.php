@@ -4,18 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class VerifyCode extends Model
+class SysPasswordHistory extends Model
 {
-    protected $table = 'verify_code';
+    protected $table = 'sys_password_history';
     protected $primaryKey = 'id';
 
     public $timestamps = false;
 
     protected $fillable = [
-        'target',//目标
-        'code',//验证码
-        'type',//类型
-        'expire_time',//过期时间
+        'user_id',//用户ID
+        'password_hash',//密码哈希值
         'create_time',//创建时间
     ];
 }

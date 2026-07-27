@@ -12,11 +12,11 @@ class TrainHomework extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'course_id',
-        'homework_title',
-        'homework_content',
-        'deadline',
-        'create_time',
+        'course_id',//课程ID
+        'homework_title',//作业标题
+        'homework_content',//作业内容
+        'deadline',//截止时间
+        'create_time',//创建时间
     ];
 
     /**

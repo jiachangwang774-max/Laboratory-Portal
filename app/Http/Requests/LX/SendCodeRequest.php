@@ -1,7 +1,9 @@
 <?php
-
+// 发送验证码请求
 namespace App\Http\Requests\LX;
 
+use App\Helpers\PhoneHelper;
+use App\Rules\PhoneNumber;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SendCodeRequest extends FormRequest
@@ -11,10 +13,22 @@ class SendCodeRequest extends FormRequest
         return true;
     }
 
+    /**
+     * 验证前预处理：清洗手机号（剔除空格、横杠、括号、+86 前缀等）
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('phone')) {
+            $this->merge([
+                'phone' => PhoneHelper::clean($this->input('phone')),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'phone' => 'required|string|size:11',
+            'phone' => ['required', new PhoneNumber],
         ];
     }
 
@@ -22,7 +36,6 @@ class SendCodeRequest extends FormRequest
     {
         return [
             'phone.required' => '手机号不能为空',
-            'phone.size'     => '手机号必须为11位',
         ];
     }
 }
