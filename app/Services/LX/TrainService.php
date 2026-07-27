@@ -10,21 +10,23 @@ use App\Models\TrainCourse;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
 use App\Traits\LogTrait;
+use Illuminate\Support\Facades\DB;
 
 class TrainService
 {
     use LogTrait;
 
     /**
-     * 获取培训课程分页列表（仅展示已上架课程）
+     * 培训课程分页列表
+     *
+     * 仅返回 status=1 的上架课程，按创建时间倒序
      */
     public function courseList(int $page = 1, int $size = 10): array
     {
-        $query = TrainCourse::enabled()
-            ->orderBy('create_time', 'desc');
+        $query = TrainCourse::enabled()->orderBy('create_time', 'desc');
 
         $total = $query->count();
-        $list  = $query->forPage($page, $size)->get()->map(function ($course) {
+        $list  = $query->forPage($page, $size)->get()->map(function (TrainCourse $course) {
             return [
                 'courseId'   => $course->course_id,
                 'courseName' => $course->course_name,
@@ -38,31 +40,34 @@ class TrainService
 
         return [
             'total' => $total,
-            'list'  => $list,
+            'list'  => $list->values(),
         ];
     }
 
     /**
      * 报名培训课程
+     *
+     * 校验报名开关 → 校验课程上架 → 校验未重复报名 → 写入报名记录
      */
     public function courseSign(int $userId, int $courseId, ?string $signInfo = null): array
     {
-        // 检查报名总开关
+        // 检查全局报名开关
         $switch = SystemConfig::getValue('train_sign_switch', '1');
         if ($switch !== '1') {
             throw new BusinessException('当前报名功能已关闭', ResponseCode::BUSINESS_ERROR);
         }
 
-        // 检查课程是否存在且已上架
+        // 检查课程是否存在且上架
         $course = TrainCourse::enabled()->find($courseId);
         if (!$course) {
             throw new BusinessException('课程不存在或已下架', ResponseCode::DATA_NOT_FOUND);
         }
 
-        // 检查是否已报名（联合唯一索引防重复）
+        // 检查是否已报名
         $exists = TrainSign::where('user_id', $userId)
             ->where('course_id', $courseId)
             ->exists();
+
         if ($exists) {
             throw new BusinessException('您已报名该课程，请勿重复报名', ResponseCode::DUPLICATE_SUBMIT);
         }
@@ -71,7 +76,7 @@ class TrainService
             'user_id'      => $userId,
             'course_id'    => $courseId,
             'sign_info'    => $signInfo,
-            'audit_status' => 0,
+            'audit_status' => 0, // 待审核
             'sign_time'    => now(),
         ]);
 
@@ -90,6 +95,8 @@ class TrainService
 
     /**
      * 我的报名记录分页
+     *
+     * 关联课程表获取课程名称，按报名时间倒序
      */
     public function signList(int $userId, int $page = 1, int $size = 10): array
     {
@@ -98,7 +105,7 @@ class TrainService
             ->orderBy('sign_time', 'desc');
 
         $total = $query->count();
-        $list  = $query->forPage($page, $size)->get()->map(function ($sign) {
+        $list  = $query->forPage($page, $size)->get()->map(function (TrainSign $sign) {
             return [
                 'signId'      => $sign->sign_id,
                 'courseId'    => $sign->course_id,
@@ -114,16 +121,17 @@ class TrainService
 
         return [
             'total' => $total,
-            'list'  => $list,
+            'list'  => $list->values(),
         ];
     }
 
     /**
      * 我的作业列表
+     *
+     * 只查询已通过审核课程下的作业，可按课程筛选，按创建时间倒序
      */
     public function homeworkList(int $userId, int $page = 1, int $size = 10, ?int $courseId = null): array
     {
-        // 只查询已通过审核的课程对应的作业
         $approvedCourseIds = TrainSign::where('user_id', $userId)
             ->where('audit_status', 1)
             ->pluck('course_id');
@@ -140,7 +148,7 @@ class TrainService
         }
 
         $total = $query->count();
-        $list  = $query->forPage($page, $size)->get()->map(function ($homework) {
+        $list  = $query->forPage($page, $size)->get()->map(function (TrainHomework $homework) {
             return [
                 'homeworkId'      => $homework->homework_id,
                 'courseId'        => $homework->course_id,
@@ -153,41 +161,46 @@ class TrainService
 
         return [
             'total' => $total,
-            'list'  => $list,
+            'list'  => $list->values(),
         ];
     }
 
     /**
      * 提交作业
+     *
+     * 校验作业存在 → 校验已通过课程审核 → 校验未重复提交 → 处理文件上传 → 写入提交记录
      */
     public function homeworkSubmit(int $userId, int $homeworkId, ?string $content = null, $file = null): array
     {
-        // 检查作业是否存在
+        /** @var TrainHomework $homework */
         $homework = TrainHomework::find($homeworkId);
+
         if (!$homework) {
             throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
-        // 检查用户是否已通过该课程的审核
+        // 校验用户已通过该课程审核
         $approved = TrainSign::where('user_id', $userId)
             ->where('course_id', $homework->course_id)
             ->where('audit_status', 1)
             ->exists();
+
         if (!$approved) {
             throw new BusinessException('您未通过该课程的报名审核，无法提交作业', ResponseCode::FORBIDDEN);
         }
 
-        // 检查是否已提交（联合唯一索引）
+        // 校验未重复提交
         $exists = HomeworkSubmit::where('user_id', $userId)
             ->where('homework_id', $homeworkId)
             ->exists();
+
         if ($exists) {
             throw new BusinessException('您已提交过该作业', ResponseCode::DUPLICATE_SUBMIT);
         }
 
         // 处理文件上传
         $filePath = '';
-        if ($file) {
+        if ($file && $file->isValid()) {
             $filePath = $file->store('homework_files', 'public');
         }
 
@@ -212,7 +225,7 @@ class TrainService
     }
 
     /**
-     * 审核状态文字映射
+     * 审核状态 → 文字映射
      */
     private function auditStatusText(int $status): string
     {
