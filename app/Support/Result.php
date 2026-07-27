@@ -42,6 +42,6 @@ class Result
             'data'    => $data,
             'success' => false,
             'trace_id' => request()->attributes->get('trace_id'),
-        ]);
+        ], $code->httpStatusCode());
     }
 }

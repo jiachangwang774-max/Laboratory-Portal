@@ -49,7 +49,7 @@ class ApiLogMiddleware
      */
     protected function filterSensitive(array $data): array
     {
-        $sensitive = ['password', 'password_confirmation', 'token', 'secret', 'id_card', 'oldPwd', 'newPwd', 'old_pwd', 'new_pwd', 'refreshToken'];
+        $sensitive = ['password', 'password_confirmation', 'token', 'secret', 'id_card', 'oldPwd', 'newPwd', 'old_pwd', 'new_pwd'];
 
         foreach ($sensitive as $field) {
             if (isset($data[$field])) {

@@ -93,17 +93,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Refresh Token time to live
-    |--------------------------------------------------------------------------
-    |
-    | Separate TTL for refresh tokens issued at login. Refresh tokens are
-    | long-lived and used only to obtain new access tokens.
-    |
-    */
-    'refresh_token_ttl' => env('JWT_REFRESH_TOKEN_TTL', 20160), // refresh token: 14 days
-
-    /*
-    |--------------------------------------------------------------------------
     | Refresh time to live
     |--------------------------------------------------------------------------
     |

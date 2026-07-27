@@ -6,7 +6,7 @@ use App\Enums\VerifyCodeType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LX\DeleteAccountRequest;
 use App\Http\Requests\LX\RegisterRequest;
-use App\Http\Requests\LX\SendRegisterCodeRequest;
+use App\Http\Requests\LX\SendCodeRequest;
 use App\Services\LX\RegisterService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
@@ -18,13 +18,14 @@ class UserRegisterController extends Controller
     ) {}
 
     /**
-     * 发送验证码到 QQ 邮箱（注册/注销账号）
-     * POST /api/v1/user/register/send_code
+     * 统一发送验证码（注册 / 重置密码 / 注销账号）
+     * POST /api/v1/user/verify_code/send
      */
-    public function sendCode(SendRegisterCodeRequest $request): JsonResponse
+    public function sendCode(SendCodeRequest $request): JsonResponse
     {
-        $type = VerifyCodeType::from($request->validated('type'));
-        $this->registerService->sendCode($request->validated('email'), $type);
+        $type  = VerifyCodeType::from($request->validated('type'));
+        $email = $request->validated('email');
+        $this->registerService->sendCode($email, $type);
         return Result::success('验证码已发送，5分钟内有效');
     }
 

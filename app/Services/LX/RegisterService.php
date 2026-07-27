@@ -19,22 +19,20 @@ class RegisterService
     use LogTrait;
 
     /**
-     * 发送验证码到 QQ 邮箱
+     * 统一发送验证码（均通过 QQ 邮箱）
      *
-     * REGISTER:     校验邮箱未被注册 → 生成6位验证码 → 入库 → 发送邮件
+     * REGISTER:      校验邮箱未被注册 → 生成6位验证码 → 入库 → 发送邮件
+     * PWD_RESET:     校验邮箱已注册且状态正常 → 生成6位验证码 → 入库 → 发送邮件
      * DELETE_ACCOUNT: 校验邮箱已注册 → 生成6位验证码 → 入库 → 发送邮件
      */
     public function sendCode(string $email, VerifyCodeType $type): void
     {
-        $exists = SysUser::where('email', $email)->exists();
-
-        if ($type === VerifyCodeType::REGISTER && $exists) {
-            throw new BusinessException('该邮箱已被注册', ResponseCode::USER_ALREADY_EXISTS);
-        }
-
-        if ($type === VerifyCodeType::DELETE_ACCOUNT && !$exists) {
-            throw new BusinessException('该邮箱未注册', ResponseCode::DATA_NOT_FOUND);
-        }
+        // 根据类型做前置校验
+        match ($type) {
+            VerifyCodeType::REGISTER       => $this->validateRegisterTarget($email),
+            VerifyCodeType::PWD_RESET      => $this->validatePwdResetTarget($email),
+            VerifyCodeType::DELETE_ACCOUNT => $this->validateDeleteAccountTarget($email),
+        };
 
         $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
@@ -46,7 +44,6 @@ class RegisterService
             'create_time' => now(),
         ]);
 
-        // 通过 QQ 邮箱发送验证码
         try {
             Mail::to($email)->send(new VerificationCodeMail($code, $type->mailTitle()));
         } catch (\Throwable $e) {
@@ -61,6 +58,42 @@ class RegisterService
             'email' => $email,
             'type'  => $type->label(),
         ]);
+    }
+
+    /**
+     * 注册场景校验：邮箱未被占用
+     */
+    private function validateRegisterTarget(string $email): void
+    {
+        if (SysUser::where('email', $email)->exists()) {
+            throw new BusinessException('该邮箱已被注册', ResponseCode::USER_ALREADY_EXISTS);
+        }
+    }
+
+    /**
+     * 重置密码场景校验：邮箱已注册且状态正常
+     */
+    private function validatePwdResetTarget(string $email): void
+    {
+        $user = SysUser::where('email', $email)->first();
+
+        if (!$user) {
+            throw new BusinessException('该邮箱未注册', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        if ($user->status !== 1) {
+            throw new BusinessException('账号已被禁用，无法重置密码', ResponseCode::ACCOUNT_DISABLED);
+        }
+    }
+
+    /**
+     * 注销账号场景校验：邮箱已注册
+     */
+    private function validateDeleteAccountTarget(string $email): void
+    {
+        if (!SysUser::where('email', $email)->exists()) {
+            throw new BusinessException('该邮箱未注册', ResponseCode::DATA_NOT_FOUND);
+        }
     }
 
     /**

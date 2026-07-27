@@ -104,6 +104,48 @@ enum ResponseCode: int
      */
     case SYSTEM_ERROR = 90001;
 
+    /**
+     * 获取每个错误码对应的 HTTP 状态码
+     */
+    public function httpStatusCode(): int
+    {
+        return match ($this) {
+            self::SUCCESS => 200,
+
+            // 1xxxx 参数异常 → 422 Unprocessable Entity
+            self::PARAM_ERROR => 422,
+
+            // 2xxxx 认证/授权异常
+            self::UNAUTHORIZED     => 401,
+            self::TOKEN_EXPIRED    => 401,
+            self::TOKEN_INVALID    => 401,
+            self::LOGIN_EXPIRED    => 401,
+            self::FORBIDDEN        => 403,
+            self::ACCOUNT_DISABLED => 403,
+            self::PASSWORD_ERROR   => 401,
+
+            // 3xxxx 数据异常
+            self::DATA_NOT_FOUND      => 404,
+            self::DATA_DUPLICATE      => 409,
+            self::USER_ALREADY_EXISTS => 409,
+
+            // 4xxxx 业务异常
+            self::BUSINESS_ERROR    => 400,
+            self::VERIFY_CODE_ERROR => 400,
+            self::DUPLICATE_SUBMIT  => 429,
+
+            // 5xxxx 第三方服务异常
+            self::THIRD_PARTY_ERROR => 502,
+            self::SMS_SEND_FAILED   => 500,
+
+            // 6xxxx 数据库/系统异常 → 500
+            self::DATABASE_ERROR  => 500,
+            self::UNIQUE_CONFLICT => 409,
+
+            self::SYSTEM_ERROR => 500,
+        };
+    }
+
     public function msg(): string
     {
         return match ($this) {

@@ -9,10 +9,7 @@ use App\Models\SysPasswordHistory;
 use App\Models\SysUser;
 use App\Traits\LogTrait;
 use Illuminate\Support\Facades\Hash;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException;
 
 class AuthService
 {
@@ -21,7 +18,7 @@ class AuthService
     /**
      * 用户登录
      *
-     * 校验用户名密码 → 检查账号状态 → 签发 accessToken + refreshToken
+     * 校验用户名密码 → 检查账号状态 → 签发 accessToken
      */
     public function login(string $username, string $password): array
     {
@@ -51,17 +48,6 @@ class AuthService
             throw new BusinessException('账号已被禁用，请联系管理员', ResponseCode::ACCOUNT_DISABLED);
         }
 
-        // 签发长时效 refresh token（14天）
-        try {
-            $refreshToken = JWTAuth::guard('user_api')
-                ->claims(['token_type' => 'refresh'])
-                ->setTTL(config('jwt.refresh_token_ttl', 20160))
-                ->fromUser($user);
-        } catch (JWTException $e) {
-            $this->logException('RefreshToken 签发异常', $e, ['user_id' => $user->user_id]);
-            throw new BusinessException('登录失败，请稍后重试', ResponseCode::SYSTEM_ERROR);
-        }
-
         $this->logBusiness('用户登录成功', [
             'user_id'  => $user->user_id,
             'username' => $user->username,
@@ -69,7 +55,6 @@ class AuthService
 
         return [
             'accessToken'  => $accessToken,
-            'refreshToken' => $refreshToken,
             'userInfo'     => $this->formatUser($user),
         ];
     }
@@ -166,49 +151,6 @@ class AuthService
         $this->recordPasswordHistory($user->user_id, $newHash);
 
         $this->logBusiness('用户修改密码', ['user_id' => $user->user_id]);
-    }
-
-    /**
-     * 刷新 Access Token
-     *
-     * 用 refreshToken 换取新的 accessToken，同时作废旧 refreshToken
-     */
-    public function refreshToken(string $refreshTokenStr): string
-    {
-        try {
-            $jwt = JWTAuth::guard('user_api')->setToken($refreshTokenStr);
-
-            // 校验 token 类型必须为 refresh
-            $payload = $jwt->getPayload();
-            if ($payload->get('token_type') !== 'refresh') {
-                throw new BusinessException('无效的刷新令牌类型', ResponseCode::TOKEN_INVALID);
-            }
-
-            /** @var SysUser $user */
-            $user = $jwt->authenticate();
-
-            if ($user->status !== 1) {
-                throw new BusinessException('账号已被禁用', ResponseCode::ACCOUNT_DISABLED);
-            }
-
-            // 作废旧 refresh token，防止重复使用
-            $jwt->invalidate();
-
-            // 签发新 access token
-            return JWTAuth::guard('user_api')
-                ->claims(['token_type' => 'access'])
-                ->fromUser($user);
-
-        } catch (TokenExpiredException $e) {
-            throw new BusinessException('刷新令牌已过期，请重新登录', ResponseCode::LOGIN_EXPIRED);
-        } catch (TokenBlacklistedException $e) {
-            throw new BusinessException('刷新令牌已失效', ResponseCode::TOKEN_EXPIRED);
-        } catch (BusinessException $e) {
-            throw $e;
-        } catch (JWTException $e) {
-            $this->logException('刷新 Token 异常', $e);
-            throw new BusinessException('刷新令牌无效', ResponseCode::TOKEN_INVALID);
-        }
     }
 
     /**

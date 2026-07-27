@@ -4,7 +4,6 @@ namespace App\Http\Controllers\LX;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LX\LoginRequest;
-use App\Http\Requests\LX\RefreshTokenRequest;
 use App\Http\Requests\LX\UpdateInfoRequest;
 use App\Http\Requests\LX\UpdatePwdRequest;
 use App\Services\LX\AuthService;
@@ -73,15 +72,4 @@ class UserAuthController extends Controller
         return Result::success('密码修改成功，请重新登录');
     }
 
-    /**
-     * 刷新 Access Token
-     * POST /api/v1/user/auth/refresh_token
-     */
-    public function refreshToken(RefreshTokenRequest $request): JsonResponse
-    {
-        $accessToken = $this->authService->refreshToken(
-            $request->validated('refreshToken')
-        );
-        return Result::success('刷新成功', ['accessToken' => $accessToken]);
-    }
 }

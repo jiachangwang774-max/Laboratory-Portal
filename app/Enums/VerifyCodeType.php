@@ -10,14 +10,19 @@ namespace App\Enums;
 enum VerifyCodeType: int
 {
     /**
-     * 用户注册
+     * 重置密码
      */
-    case REGISTER = 3;
+    case PWD_RESET = 1;
 
     /**
      * 注销账号
      */
-    case DELETE_ACCOUNT = 4;
+    case DELETE_ACCOUNT = 2;
+
+    /**
+     * 用户注册
+     */
+    case REGISTER = 3;
 
     /**
      * 获取验证码用途描述
@@ -25,8 +30,9 @@ enum VerifyCodeType: int
     public function label(): string
     {
         return match ($this) {
-            self::REGISTER       => '注册',
+            self::PWD_RESET      => '重置密码',
             self::DELETE_ACCOUNT => '注销账号',
+            self::REGISTER       => '注册',
         };
     }
 
@@ -36,8 +42,9 @@ enum VerifyCodeType: int
     public function mailTitle(): string
     {
         return match ($this) {
-            self::REGISTER       => '注册',
+            self::PWD_RESET      => '重置密码',
             self::DELETE_ACCOUNT => '注销账号',
+            self::REGISTER       => '注册',
         };
     }
 }

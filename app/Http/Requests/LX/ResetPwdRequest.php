@@ -2,10 +2,8 @@
 // 重置密码请求
 namespace App\Http\Requests\LX;
 
-use App\Helpers\PhoneHelper;
 use App\Models\SysUser;
 use App\Rules\PasswordStrength;
-use App\Rules\PhoneNumber;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ResetPwdRequest extends FormRequest
@@ -15,33 +13,21 @@ class ResetPwdRequest extends FormRequest
         return true;
     }
 
-    /**
-     * 验证前预处理：清洗手机号（剔除空格、横杠、括号、+86 前缀等）
-     */
-    protected function prepareForValidation(): void
-    {
-        if ($this->has('phone')) {
-            $this->merge([
-                'phone' => PhoneHelper::clean($this->input('phone')),
-            ]);
-        }
-    }
-
     public function rules(): array
     {
-        // 根据手机号查找用户，用于密码关联信息检测
-        $phone  = $this->input('phone', '');
-        $user   = SysUser::where('phone', $phone)->first();
+        // 根据邮箱查找用户，用于密码关联信息检测
+        $email = $this->input('email', '');
+        $user  = SysUser::where('email', $email)->first();
 
         return [
-            'phone'  => ['required', new PhoneNumber],
+            'email'  => 'required|email|max:50',
             'code'   => 'required|string|size:6',
             'newPwd' => [
                 'required',
                 'string',
                 new PasswordStrength([
                     'username' => $user?->username ?? '',
-                    'phone'    => $phone,
+                    'phone'    => $user?->phone ?? '',
                 ]),
             ],
         ];
@@ -50,7 +36,9 @@ class ResetPwdRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.required'  => '手机号不能为空',
+            'email.required'  => '邮箱不能为空',
+            'email.email'     => '邮箱格式不正确',
+            'email.max'       => '邮箱不能超过50个字符',
             'code.required'   => '验证码不能为空',
             'code.size'       => '验证码必须为6位',
             'newPwd.required' => '新密码不能为空',

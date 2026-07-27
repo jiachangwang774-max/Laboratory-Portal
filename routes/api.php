@@ -11,9 +11,11 @@ Route::prefix('user/auth')->group(function () {
     Route::post('/login',         [UserAuthController::class, 'login']);//登录
 });
 
+// 统一发送验证码（注册 / 重置密码 / 注销账号）
+Route::post('user/verify_code/send', [UserRegisterController::class, 'sendCode']);
+
 Route::prefix('user/register')->group(function () {
-    Route::post('/send_code', [UserRegisterController::class, 'sendCode']);//发送验证码（注册/注销）
-    Route::post('/',          [UserRegisterController::class, 'register']);//用户注册
+    Route::post('/', [UserRegisterController::class, 'register']);//用户注册
 });
 
 // 需认证路由 - 注销账号
@@ -25,7 +27,6 @@ Route::prefix('user/register')->middleware('auth:user_api')->group(function () {
 // 3.3 忘记密码 /api/v1/user/pwd_reset
 // =======================================================================
 Route::prefix('user/pwd_reset')->group(function () {
-    Route::post('/send_code', [UserPwdResetController::class, 'sendCode']);//发送重置密码验证码
     Route::post('/reset_pwd', [UserPwdResetController::class, 'resetPwd']);//重置密码
 });
 
