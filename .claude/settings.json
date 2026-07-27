@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm \"d:\\\\git-base\\\\labor\\\\Laboratory-Portal\\\\config\\\\sanctum.php\")"
+    ],
+    "additionalDirectories": [
+      "d:\\git-base\\labor\\Laboratory-Portal\\config"
+    ]
+  }
+}
