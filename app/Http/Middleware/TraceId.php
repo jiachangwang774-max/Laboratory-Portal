@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class TraceId
 {
@@ -16,7 +17,7 @@ class TraceId
         $traceId = (string) Str::uuid();
 
         // 注入到 Log 共享上下文，所有日志自动携带
-        \Log::withContext([
+        Log::withContext([
             'trace_id' => $traceId,
         ]);
 
