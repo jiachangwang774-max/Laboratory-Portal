@@ -60,9 +60,19 @@ enum ResponseCode: int
     case DATA_DUPLICATE = 30003;
 
     /**
+     * 用户已存在
+     */
+    case USER_ALREADY_EXISTS = 30004;
+
+    /**
      * 业务异常
      */
     case BUSINESS_ERROR = 40001;
+
+    /**
+     * 验证码错误或过期
+     */
+    case VERIFY_CODE_ERROR = 40002;
 
     /**
      * 重复提交
@@ -109,11 +119,13 @@ enum ResponseCode: int
             self::ACCOUNT_DISABLED => '账号已被禁用',
             self::PASSWORD_ERROR   => '密码错误',
 
-            self::DATA_NOT_FOUND   => '记录不存在',
-            self::DATA_DUPLICATE   => '数据重复',
+            self::DATA_NOT_FOUND      => '记录不存在',
+            self::DATA_DUPLICATE      => '数据重复',
+            self::USER_ALREADY_EXISTS => '用户已存在',
 
-            self::BUSINESS_ERROR   => '业务处理失败',
-            self::DUPLICATE_SUBMIT => '请勿重复提交',
+            self::BUSINESS_ERROR    => '业务处理失败',
+            self::VERIFY_CODE_ERROR => '验证码错误或已过期',
+            self::DUPLICATE_SUBMIT  => '请勿重复提交',
 
             self::THIRD_PARTY_ERROR => '第三方服务异常',
             self::SMS_SEND_FAILED   => '短信发送失败',

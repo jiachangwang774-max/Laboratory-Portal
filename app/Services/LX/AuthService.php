@@ -214,6 +214,8 @@ class AuthService
             'avatar'   => $user->avatar,
             'phone'    => $user->phone,
             'email'    => $user->email,
+            'grade'    => $user->grade,
+            'major'    => $user->major,
         ];
     }
 }

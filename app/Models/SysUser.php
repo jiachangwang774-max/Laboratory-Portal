@@ -20,6 +20,8 @@ class SysUser extends Authenticatable implements JWTSubject
         'phone',
         'email',
         'avatar',
+        'grade',
+        'major',
         'status',
     ];
 
