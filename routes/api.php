@@ -9,6 +9,7 @@ use App\Http\Controllers\WJC\AdminAuthController;
 use App\Http\Controllers\WJC\NoticeController;
 use App\Http\Controllers\WJC\SignAuditController;
 use App\Http\Controllers\WJC\SignSwitchController;
+use App\Http\Controllers\LX\ApplicationController;
 
 // =======================================================================
 // 3. 前台用户端接口 /api/v1/user
@@ -48,12 +49,6 @@ Route::prefix('user/auth')->middleware('auth:user_api')->group(function () {
 Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
     Route::prefix('course')->group(function () {
         Route::get('/list', [TrainController::class, 'courseList']);//获取课程列表
-        Route::post('/sign', [TrainController::class, 'courseSign']);//报名课程
-    });
-
-    // 报名记录
-    Route::prefix('sign')->group(function () {
-        Route::get('/list', [TrainController::class, 'signList']);//获取报名记录列表
     });
 
     // 作业
@@ -61,6 +56,19 @@ Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
         Route::get('/list',   [TrainController::class, 'homeworkList']);//获取作业列表
         Route::post('/submit', [TrainController::class, 'homeworkSubmit']);//提交作业
     });
+});
+
+// 3.5 报名申请表 /api/v1/user/application（无需登录）
+Route::prefix('user/application')->group(function () {
+    // 草稿
+    Route::prefix('draft')->group(function () {
+        Route::post('/save', [ApplicationController::class, 'saveDraft']);//保存草稿
+        Route::get('/',      [ApplicationController::class, 'draft']);//获取草稿
+    });
+
+    // 提交与详情
+    Route::post('/submit', [ApplicationController::class, 'submit']);//提交报名
+    Route::get('/detail',  [ApplicationController::class, 'detail']);//获取已提交详情
 });
 
 // =======================================================================

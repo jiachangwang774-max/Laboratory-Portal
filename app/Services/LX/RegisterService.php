@@ -5,7 +5,6 @@ namespace App\Services\LX;
 use App\Enums\ResponseCode;
 use App\Enums\VerifyCodeType;
 use App\Exceptions\BusinessException;
-use App\Helpers\PhoneHelper;
 use App\Mail\VerificationCodeMail;
 use App\Models\SysPasswordHistory;
 use App\Models\SysUser;
@@ -99,7 +98,7 @@ class RegisterService
     /**
      * 用户注册
      *
-     * 验证码校验 → 检查用户名/邮箱/手机号唯一性 → 创建用户 → 删除已用验证码
+     * 验证码校验 → 检查用户名/邮箱唯一性 → 创建用户 → 删除已用验证码
      */
     public function register(array $data): array
     {
@@ -123,19 +122,15 @@ class RegisterService
             throw new BusinessException('该邮箱已被注册', ResponseCode::USER_ALREADY_EXISTS);
         }
 
-        // 检查手机号唯一性
-        if (SysUser::where('phone', $data['phone'])->exists()) {
-            throw new BusinessException('该手机号已被注册', ResponseCode::USER_ALREADY_EXISTS);
-        }
-
         $user = SysUser::create([
-            'username'  => $data['username'],
-            'password'  => Hash::make($data['password']),
-            'email'     => $data['email'],
-            'phone'     => PhoneHelper::clean($data['phone']),
-            'grade'     => $data['grade'],
-            'major'     => $data['major'],
-            'status'    => 1,
+            'username'   => $data['username'],
+            'password'   => Hash::make($data['password']),
+            'email'      => $data['email'],
+            'grade'      => $data['grade'],
+            'major'      => $data['major'],
+            'college'    => $data['college'],
+            'student_id' => $data['student_id'],
+            'status'     => 1,
         ]);
 
         // 记录初始密码到历史
@@ -155,12 +150,13 @@ class RegisterService
         ]);
 
         return [
-            'userId'   => $user->user_id,
-            'username' => $user->username,
-            'email'    => $user->email,
-            'phone'    => PhoneHelper::mask($user->phone),
-            'grade'    => $user->grade,
-            'major'    => $user->major,
+            'userId'     => $user->user_id,
+            'username'   => $user->username,
+            'email'      => $user->email,
+            'grade'      => $user->grade,
+            'major'      => $user->major,
+            'college'    => $user->college,
+            'student_id' => $user->student_id,
         ];
     }
 

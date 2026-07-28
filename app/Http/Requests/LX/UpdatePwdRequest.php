@@ -19,7 +19,7 @@ class UpdatePwdRequest extends FormRequest
         $user = auth('user_api')->user();
 
         return [
-            'oldPwd' => 'required|string',
+            'code'   => 'required|string|size:6',
             'newPwd' => [
                 'required',
                 'string',
@@ -34,7 +34,8 @@ class UpdatePwdRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'oldPwd.required' => '原密码不能为空',
+            'code.required'   => '验证码不能为空',
+            'code.size'       => '验证码必须为6位',
             'newPwd.required' => '新密码不能为空',
         ];
     }

@@ -43,39 +43,45 @@ class WJCAdminSeeder extends Seeder
         $user1 = SysUser::firstOrCreate(
             ['username' => 'stu001'],
             [
-                'password'  => Hash::make('Pass@123'),
-                'real_name' => '张三',
-                'phone'     => '13800138001',
-                'email'     => 'zhangsan@test.com',
-                'grade'     => '2023级',
-                'major'     => '计算机科学',
-                'status'    => 1,
+                'password'   => Hash::make('Pass@123'),
+                'real_name'  => '张三',
+                'phone'      => '13800138001',
+                'email'      => 'zhangsan@test.com',
+                'grade'      => '2023级',
+                'major'      => '计算机科学',
+                'college'    => '计算机与软件学院',
+                'student_id' => '202301001',
+                'status'     => 1,
             ]
         );
 
         $user2 = SysUser::firstOrCreate(
             ['username' => 'stu002'],
             [
-                'password'  => Hash::make('Pass@123'),
-                'real_name' => '李四',
-                'phone'     => '13800138002',
-                'email'     => 'lisi@test.com',
-                'grade'     => '2023级',
-                'major'     => '电子信息',
-                'status'    => 1,
+                'password'   => Hash::make('Pass@123'),
+                'real_name'  => '李四',
+                'phone'      => '13800138002',
+                'email'      => 'lisi@test.com',
+                'grade'      => '2023级',
+                'major'      => '电子信息',
+                'college'    => '电子信息工程学院',
+                'student_id' => '202302001',
+                'status'     => 1,
             ]
         );
 
         $user3 = SysUser::firstOrCreate(
             ['username' => 'stu003'],
             [
-                'password'  => Hash::make('Pass@123'),
-                'real_name' => '王五',
-                'phone'     => '13800138003',
-                'email'     => 'wangwu@test.com',
-                'grade'     => '2022级',
-                'major'     => '自动化',
-                'status'    => 1,
+                'password'   => Hash::make('Pass@123'),
+                'real_name'  => '王五',
+                'phone'      => '13800138003',
+                'email'      => 'wangwu@test.com',
+                'grade'      => '2022级',
+                'major'      => '自动化',
+                'college'    => '自动化学院',
+                'student_id' => '202203001',
+                'status'     => 1,
             ]
         );
 

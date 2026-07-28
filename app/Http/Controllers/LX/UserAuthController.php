@@ -66,7 +66,7 @@ class UserAuthController extends Controller
     public function updatePwd(UpdatePwdRequest $request): JsonResponse
     {
         $this->authService->updatePwd(
-            $request->validated('oldPwd'),
+            $request->validated('code'),
             $request->validated('newPwd')
         );
         return Result::success('密码修改成功，请重新登录');

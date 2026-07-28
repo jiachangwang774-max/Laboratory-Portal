@@ -3,10 +3,12 @@
 namespace App\Services\LX;
 
 use App\Enums\ResponseCode;
+use App\Enums\VerifyCodeType;
 use App\Exceptions\BusinessException;
 use App\Helpers\PhoneHelper;
 use App\Models\SysPasswordHistory;
 use App\Models\SysUser;
+use App\Models\VerifyCode;
 use App\Traits\LogTrait;
 use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
@@ -107,6 +109,21 @@ class AuthService
         if (isset($data['email'])) {
             $updateData['email'] = $data['email'];
         }
+        if (isset($data['phone'])) {
+            $updateData['phone'] = $data['phone'];
+        }
+        if (isset($data['grade'])) {
+            $updateData['grade'] = $data['grade'];
+        }
+        if (isset($data['major'])) {
+            $updateData['major'] = $data['major'];
+        }
+        if (isset($data['college'])) {
+            $updateData['college'] = $data['college'];
+        }
+        if (isset($data['student_id'])) {
+            $updateData['student_id'] = $data['student_id'];
+        }
 
         if (empty($updateData)) {
             return $this->formatUser($user);
@@ -127,17 +144,24 @@ class AuthService
     }
 
     /**
-     * 修改密码
+     * 修改密码（通过邮箱验证码）
      *
-     * 校验旧密码 → 检查历史复用 → 更新为新密码 → 记录历史
+     * 验证码校验 → 检查历史复用 → 更新为新密码 → 记录历史 → 删除已用验证码
      */
-    public function updatePwd(string $oldPwd, string $newPwd): void
+    public function updatePwd(string $code, string $newPwd): void
     {
         /** @var SysUser $user */
         $user = auth('user_api')->user();
 
-        if (!Hash::check($oldPwd, $user->password)) {
-            throw new BusinessException('原密码错误', ResponseCode::PASSWORD_ERROR);
+        // 校验邮箱验证码
+        $verifyCode = VerifyCode::where('target', $user->email)
+            ->where('code', $code)
+            ->where('type', VerifyCodeType::PWD_RESET->value)
+            ->where('expire_time', '>', now())
+            ->first();
+
+        if (!$verifyCode) {
+            throw new BusinessException('验证码错误或已过期', ResponseCode::VERIFY_CODE_ERROR);
         }
 
         // 检查新密码是否与历史密码重复
@@ -150,6 +174,9 @@ class AuthService
         // 记录密码历史
         $this->recordPasswordHistory($user->user_id, $newHash);
 
+        // 删除已使用的验证码
+        $verifyCode->delete();
+
         $this->logBusiness('用户修改密码', ['user_id' => $user->user_id]);
     }
 
@@ -159,14 +186,16 @@ class AuthService
     private function formatUser(SysUser $user): array
     {
         return [
-            'userId'   => $user->user_id,
-            'username' => $user->username,
-            'realName' => $user->real_name,
-            'avatar'   => $user->avatar,
-            'phone'    => PhoneHelper::mask($user->phone),
-            'email'    => $user->email,
-            'grade'    => $user->grade,
-            'major'    => $user->major,
+            'userId'     => $user->user_id,
+            'username'   => $user->username,
+            'realName'   => $user->real_name,
+            'avatar'     => $user->avatar,
+            'phone'      => $user->phone ? PhoneHelper::mask($user->phone) : null,
+            'email'      => $user->email,
+            'grade'      => $user->grade,
+            'major'      => $user->major,
+            'college'    => $user->college,
+            'student_id' => $user->student_id,
         ];
     }
 

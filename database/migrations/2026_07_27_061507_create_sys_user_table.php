@@ -15,6 +15,10 @@ return new class extends Migration
             $table->string('real_name', 20)->nullable()->comment('真实姓名');
             $table->string('phone', 11)->nullable()->unique()->comment('手机号码');
             $table->string('email', 50)->nullable()->comment('邮箱');
+            $table->string('grade', 50)->nullable()->comment('年级');
+            $table->string('major', 100)->nullable()->comment('专业');
+            $table->string('college', 100)->nullable()->comment('学院');
+            $table->string('student_id', 50)->nullable()->comment('学号');
             $table->string('avatar', 255)->nullable()->comment('头像url');
             $table->tinyInteger('status')->default(1)->comment('状态 0禁用 1正常');
             $table->dateTime('create_time')->useCurrent()->comment('创建时间');

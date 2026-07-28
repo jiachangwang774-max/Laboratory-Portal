@@ -22,6 +22,8 @@ class SysUser extends Authenticatable implements JWTSubject
         'avatar',//头像
         'grade',//年级
         'major',//专业
+        'college',//学院
+        'student_id',//学号
         'status',//状态
     ];
 

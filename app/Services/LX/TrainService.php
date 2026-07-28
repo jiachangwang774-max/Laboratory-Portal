@@ -5,12 +5,10 @@ namespace App\Services\LX;
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\HomeworkSubmit;
-use App\Models\SystemConfig;
 use App\Models\TrainCourse;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
 use App\Traits\LogTrait;
-use Illuminate\Support\Facades\DB;
 
 class TrainService
 {
@@ -35,87 +33,6 @@ class TrainService
                 'startTime'  => $course->start_time,
                 'endTime'    => $course->end_time,
                 'maxSign'    => $course->max_sign,
-            ];
-        });
-
-        return [
-            'total' => $total,
-            'list'  => $list->values(),
-        ];
-    }
-
-    /**
-     * 报名培训课程
-     *
-     * 校验报名开关 → 校验课程上架 → 校验未重复报名 → 写入报名记录
-     */
-    public function courseSign(int $userId, int $courseId, ?string $signInfo = null): array
-    {
-        // 检查全局报名开关
-        $switch = SystemConfig::getValue('train_sign_switch', '1');
-        if ($switch !== '1') {
-            throw new BusinessException('当前报名功能已关闭', ResponseCode::BUSINESS_ERROR);
-        }
-
-        // 检查课程是否存在且上架
-        $course = TrainCourse::enabled()->find($courseId);
-        if (!$course) {
-            throw new BusinessException('课程不存在或已下架', ResponseCode::DATA_NOT_FOUND);
-        }
-
-        // 检查是否已报名
-        $exists = TrainSign::where('user_id', $userId)
-            ->where('course_id', $courseId)
-            ->exists();
-
-        if ($exists) {
-            throw new BusinessException('您已报名该课程，请勿重复报名', ResponseCode::DUPLICATE_SUBMIT);
-        }
-
-        $sign = TrainSign::create([
-            'user_id'      => $userId,
-            'course_id'    => $courseId,
-            'sign_info'    => $signInfo,
-            'audit_status' => 0, // 待审核
-            'sign_time'    => now(),
-        ]);
-
-        $this->logBusiness('用户报名课程', [
-            'user_id'   => $userId,
-            'course_id' => $courseId,
-            'sign_id'   => $sign->sign_id,
-        ]);
-
-        return [
-            'signId'      => $sign->sign_id,
-            'auditStatus' => 0,
-            'statusText'  => '待审核',
-        ];
-    }
-
-    /**
-     * 我的报名记录分页
-     *
-     * 关联课程表获取课程名称，按报名时间倒序
-     */
-    public function signList(int $userId, int $page = 1, int $size = 10): array
-    {
-        $query = TrainSign::with('course')
-            ->where('user_id', $userId)
-            ->orderBy('sign_time', 'desc');
-
-        $total = $query->count();
-        $list  = $query->forPage($page, $size)->get()->map(function (TrainSign $sign) {
-            return [
-                'signId'      => $sign->sign_id,
-                'courseId'    => $sign->course_id,
-                'courseName'  => $sign->course->course_name ?? '',
-                'signInfo'    => $sign->sign_info,
-                'auditStatus' => $sign->audit_status,
-                'statusText'  => $this->auditStatusText($sign->audit_status),
-                'auditRemark' => $sign->audit_remark,
-                'signTime'    => $sign->sign_time,
-                'auditTime'   => $sign->audit_time,
             ];
         });
 
@@ -224,16 +141,4 @@ class TrainService
         ];
     }
 
-    /**
-     * 审核状态 → 文字映射
-     */
-    private function auditStatusText(int $status): string
-    {
-        return match ($status) {
-            0 => '待审核',
-            1 => '审核通过',
-            2 => '审核驳回',
-            default => '未知',
-        };
-    }
 }
