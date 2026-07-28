@@ -15,7 +15,7 @@ class AdminResetPwdRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone'  => 'required|string',
+            'email'  => 'required|email|max:50',
             'code'   => 'required|string|max:10',
             'newPwd' => ['required', 'string', new PasswordStrength()],
         ];
@@ -24,7 +24,8 @@ class AdminResetPwdRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.required'  => '手机号不能为空',
+            'email.required'  => '邮箱不能为空',
+            'email.email'     => '邮箱格式不正确',
             'code.required'   => '验证码不能为空',
             'code.max'        => '验证码不能超过10位',
             'newPwd.required' => '新密码不能为空',

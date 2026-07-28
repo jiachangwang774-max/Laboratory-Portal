@@ -69,7 +69,7 @@ class AdminAuthController extends Controller
      */
     public function sendCode(AdminSendCodeRequest $request): JsonResponse
     {
-        $this->adminAuthService->sendCode($request->validated('phone'));
+        $this->adminAuthService->sendCode($request->validated('email'));
         return Result::success('验证码已下发');
     }
 
@@ -80,7 +80,7 @@ class AdminAuthController extends Controller
     public function resetPwd(AdminResetPwdRequest $request): JsonResponse
     {
         $this->adminAuthService->resetPwd(
-            $request->validated('phone'),
+            $request->validated('email'),
             $request->validated('code'),
             $request->validated('newPwd')
         );

@@ -3,7 +3,6 @@
 namespace App\Http\Requests\WJC;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Rules\PhoneNumber;
 
 class AdminSendCodeRequest extends FormRequest
 {
@@ -15,14 +14,16 @@ class AdminSendCodeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', new PhoneNumber()],
+            'email' => 'required|email|max:50',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'phone.required' => '手机号不能为空',
+            'email.required' => '邮箱不能为空',
+            'email.email'    => '邮箱格式不正确',
+            'email.max'      => '邮箱不能超过50个字符',
         ];
     }
 }
