@@ -8,6 +8,7 @@ use App\Http\Controllers\LX\TrainController;
 use App\Http\Controllers\WJC\AdminAuthController;
 use App\Http\Controllers\WJC\NoticeController;
 use App\Http\Controllers\WJC\SignAuditController;
+use App\Http\Controllers\WJC\SignSwitchController;
 
 // =======================================================================
 // 3. 前台用户端接口 /api/v1/user
@@ -93,6 +94,17 @@ Route::prefix('admin/notice')->middleware('auth:admin_api')->group(function () {
     Route::put('/update/{id}',     [NoticeController::class, 'update'])->whereNumber('id');//更新公告
     Route::get('/list',            [NoticeController::class, 'list']);//后台获取公告列表
     Route::get('/detail/{id}',     [NoticeController::class, 'detail'])->whereNumber('id');//后台获取公告详情
+});
+
+// 4.3 报名开关 /api/v1/admin/sign_switch — 公开路由
+Route::prefix('admin/sign_switch')->group(function () {
+    Route::get('/front/get', [SignSwitchController::class, 'frontGet']);//前台查询报名开关
+});
+
+// 4.3 报名开关 — 需鉴权路由
+Route::prefix('admin/sign_switch')->middleware('auth:admin_api')->group(function () {
+    Route::get('/get',    [SignSwitchController::class, 'get']);//查询报名开关
+    Route::put('/update', [SignSwitchController::class, 'update']);//修改报名开关
 });
 
 // 4.4 报名审核 /api/v1/admin/sign_audit — 需鉴权路由

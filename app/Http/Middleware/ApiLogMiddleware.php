@@ -22,11 +22,20 @@ class ApiLogMiddleware
         // 过滤敏感信息
         $input = $this->filterSensitive($request->all());
 
+        // 尝试从不同 guard 获取用户
+        $userId = null;
+        try {
+            $userId = optional(auth('user_api')->user())->user_id
+                   ?? optional(auth('admin_api')->user())->admin_id;
+        } catch (\Throwable $e) {
+            // 忽略 JWT 解析异常
+        }
+
         Log::channel('api')->info('API Request', [
             'url'             => $request->fullUrl(),
             'method'          => $request->method(),
             'ip'              => $request->ip(),
-            'user_id'         => optional(auth('user_api')->user())->user_id,
+            'user_id'         => $userId,
             'request'         => $input,
             'response_status' => $response->status(),
             'duration_ms'     => $duration,
