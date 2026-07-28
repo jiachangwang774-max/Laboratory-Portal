@@ -43,6 +43,7 @@ Route::prefix('user/auth')->middleware('auth:user_api')->group(function () {
     Route::get('/info',         [UserAuthController::class, 'info']);//获取用户信息
     Route::post('/update_info', [UserAuthController::class, 'updateInfo']);//更新用户信息
     Route::post('/update_pwd',  [UserAuthController::class, 'updatePwd']);//更新用户密码
+    Route::post('/upload_avatar', [UserAuthController::class, 'uploadAvatar']);//上传头像
 });
 
 // 3.4 用户端培训 /api/v1/user/train

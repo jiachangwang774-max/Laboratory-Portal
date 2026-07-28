@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LX\LoginRequest;
 use App\Http\Requests\LX\UpdateInfoRequest;
 use App\Http\Requests\LX\UpdatePwdRequest;
+use App\Http\Requests\LX\UploadAvatarRequest;
 use App\Services\LX\AuthService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
@@ -57,6 +58,16 @@ class UserAuthController extends Controller
     {
         $data = $this->authService->updateInfo($request->validated());
         return Result::success('资料修改成功', $data);
+    }
+
+    /**
+     * 上传头像
+     * POST /api/v1/user/auth/upload_avatar
+     */
+    public function uploadAvatar(UploadAvatarRequest $request): JsonResponse
+    {
+        $data = $this->authService->uploadAvatar($request->file('avatar'));
+        return Result::success('头像上传成功', $data);
     }
 
     /**

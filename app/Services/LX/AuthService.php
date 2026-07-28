@@ -10,7 +10,9 @@ use App\Models\SysPasswordHistory;
 use App\Models\SysUser;
 use App\Models\VerifyCode;
 use App\Traits\LogTrait;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use OSS\OssClient;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 
 class AuthService
@@ -141,6 +143,49 @@ class AuthService
         );
 
         return $this->formatUser($user);
+    }
+
+    /**
+     * 上传头像到 OSS 并自动更新用户 avatar 字段
+     */
+    public function uploadAvatar(UploadedFile $file): array
+    {
+        /** @var SysUser $user */
+        $user = auth('user_api')->user();
+
+        // 生成唯一文件名
+        $extension = $file->getClientOriginalExtension();
+        $object    = 'avatars/' . uniqid() . '.' . $extension;
+
+        // 上传到 OSS
+        $ossClient = new OssClient(
+            config('filesystems.disks.oss.access_id'),
+            config('filesystems.disks.oss.access_key'),
+            config('filesystems.disks.oss.endpoint'),
+        );
+        $ossClient->putObject(
+            config('filesystems.disks.oss.bucket'),
+            $object,
+            $file->getContent(),
+        );
+
+        // 拼接公开访问 URL
+        $url = 'https://' . config('filesystems.disks.oss.bucket') . '.'
+             . config('filesystems.disks.oss.endpoint') . '/' . $object;
+
+        $this->logBusiness('头像上传成功', [
+            'user_id' => $user->user_id,
+            'object'  => $object,
+            'url'     => $url,
+        ]);
+
+        // 自动更新用户头像字段
+        $user->avatar = $url;
+        $user->save();
+
+        return [
+            'avatar' => $url,
+        ];
     }
 
     /**

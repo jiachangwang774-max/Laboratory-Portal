@@ -56,6 +56,14 @@ return [
             'throw' => false,
         ],
 
+        'oss' => [
+            'access_id'  => env('ALI_OSS_ACCESS_KEY_ID'),
+            'access_key' => env('ALI_OSS_ACCESS_KEY_SECRET'),
+            'bucket'     => env('ALI_OSS_BUCKET'),
+            'endpoint'   => env('ALI_OSS_ENDPOINT'),
+            'cdn_domain' => env('ALI_OSS_CDN_DOMAIN'),
+        ],
+
     ],
 
     /*
