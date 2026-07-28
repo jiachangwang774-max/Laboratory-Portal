@@ -1,0 +1,184 @@
+<?php
+
+namespace App\Services\WJC;
+
+use App\Enums\ResponseCode;
+use App\Enums\VerifyCodeType;
+use App\Exceptions\BusinessException;
+use App\Helpers\PhoneHelper;
+use App\Models\SysAdmin;
+use App\Models\VerifyCode;
+use App\Traits\LogTrait;
+use Illuminate\Support\Facades\Hash;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
+
+class AdminAuthService
+{
+    use LogTrait;
+
+    /**
+     * 管理员登录
+     */
+    public function login(string $adminName, string $password): array
+    {
+        $credentials = ['admin_name' => $adminName, 'password' => $password];
+
+        try {
+            $accessToken = auth('admin_api')->attempt($credentials);
+        } catch (JWTException $e) {
+            $this->logException('管理员JWT令牌签发异常', $e, ['admin_name' => $adminName]);
+            throw new BusinessException('登录失败，请稍后重试', ResponseCode::SYSTEM_ERROR);
+        }
+
+        if (!$accessToken) {
+            $this->logBusiness('管理员登录失败-密码错误', ['admin_name' => $adminName]);
+            throw new BusinessException('管理员账号或密码错误', ResponseCode::PASSWORD_ERROR);
+        }
+
+        /** @var SysAdmin $admin */
+        $admin = auth('admin_api')->user();
+
+        if ($admin->status !== 1) {
+            auth('admin_api')->logout();
+            $this->logBusiness('禁用管理员账号尝试登录', [
+                'admin_id'   => $admin->admin_id,
+                'admin_name' => $admin->admin_name,
+            ]);
+            throw new BusinessException('管理员账号已被禁用', ResponseCode::ACCOUNT_DISABLED);
+        }
+
+        $this->logBusiness('管理员登录成功', [
+            'admin_id'   => $admin->admin_id,
+            'admin_name' => $admin->admin_name,
+        ]);
+
+        return [
+            'accessToken' => $accessToken,
+            'adminInfo'   => $this->formatAdmin($admin),
+        ];
+    }
+
+    /**
+     * 管理员登出
+     */
+    public function logout(): void
+    {
+        /** @var SysAdmin|null $admin */
+        $admin = auth('admin_api')->user();
+
+        if ($admin) {
+            $this->logBusiness('管理员登出', ['admin_id' => $admin->admin_id]);
+        }
+
+        auth('admin_api')->logout();
+    }
+
+    /**
+     * 获取当前管理员信息
+     */
+    public function info(): array
+    {
+        /** @var SysAdmin $admin */
+        $admin = auth('admin_api')->user();
+
+        return $this->formatAdmin($admin);
+    }
+
+    /**
+     * 管理员修改自身密码
+     */
+    public function updatePwd(string $oldPwd, string $newPwd): void
+    {
+        /** @var SysAdmin $admin */
+        $admin = auth('admin_api')->user();
+
+        if (!Hash::check($oldPwd, $admin->password)) {
+            throw new BusinessException('原密码错误', ResponseCode::PASSWORD_ERROR);
+        }
+
+        if (Hash::check($newPwd, $admin->password)) {
+            throw new BusinessException('新密码不能与当前密码相同', ResponseCode::BUSINESS_ERROR);
+        }
+
+        $admin->password = Hash::make($newPwd);
+        $admin->save();
+
+        $this->logBusiness('管理员修改密码', ['admin_id' => $admin->admin_id]);
+    }
+
+    /**
+     * 发送管理员找回密码验证码
+     */
+    public function sendCode(string $phone): void
+    {
+        $admin = SysAdmin::where('phone', PhoneHelper::clean($phone))->first();
+
+        if (!$admin) {
+            throw new BusinessException('该手机号未绑定管理员账号', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        // 生成6位随机验证码
+        $code = (string) random_int(100000, 999999);
+
+        VerifyCode::create([
+            'target'      => $phone,
+            'code'        => $code,
+            'type'        => VerifyCodeType::ADMIN_PWD_RESET->value,
+            'expire_time' => now()->addMinutes(5),
+            'create_time' => now(),
+        ]);
+
+        $this->logBusiness('管理员找回密码验证码已发送', [
+            'admin_id' => $admin->admin_id,
+            'phone'    => PhoneHelper::mask($phone),
+        ]);
+
+        // TODO: 接入短信服务发送验证码
+    }
+
+    /**
+     * 管理员重置密码
+     */
+    public function resetPwd(string $phone, string $code, string $newPwd): void
+    {
+        $cleanPhone = PhoneHelper::clean($phone);
+
+        $verifyCode = VerifyCode::where('target', $cleanPhone)
+            ->where('code', $code)
+            ->where('type', VerifyCodeType::ADMIN_PWD_RESET->value)
+            ->where('expire_time', '>', now())
+            ->first();
+
+        if (!$verifyCode) {
+            throw new BusinessException('验证码错误或已过期', ResponseCode::VERIFY_CODE_ERROR);
+        }
+
+        $admin = SysAdmin::where('phone', $cleanPhone)->first();
+
+        if (!$admin) {
+            throw new BusinessException('管理员不存在', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        if (Hash::check($newPwd, $admin->password)) {
+            throw new BusinessException('新密码不能与当前密码相同', ResponseCode::BUSINESS_ERROR);
+        }
+
+        $admin->password = Hash::make($newPwd);
+        $admin->save();
+
+        $verifyCode->delete();
+
+        $this->logBusiness('管理员重置密码成功', ['admin_id' => $admin->admin_id]);
+    }
+
+    private function formatAdmin(SysAdmin $admin): array
+    {
+        return [
+            'adminId'   => $admin->admin_id,
+            'adminName' => $admin->admin_name,
+            'realName'  => $admin->real_name,
+            'phone'     => PhoneHelper::mask($admin->phone),
+            'email'     => $admin->email,
+        ];
+    }
+}

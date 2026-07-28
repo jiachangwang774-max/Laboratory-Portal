@@ -24,6 +24,10 @@ return [
             'driver' => 'jwt',
             'provider' => 'sys_users',
         ],
+        'admin_api' => [
+            'driver' => 'jwt',
+            'provider' => 'sys_admins',
+        ],
     ],
 
     /*
@@ -36,6 +40,10 @@ return [
         'sys_users' => [
             'driver' => 'eloquent',
             'model' => App\Models\SysUser::class,
+        ],
+        'sys_admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\SysAdmin::class,
         ],
     ],
 
