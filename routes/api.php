@@ -6,9 +6,12 @@ use App\Http\Controllers\LX\UserAuthController;
 use App\Http\Controllers\LX\UserPwdResetController;
 use App\Http\Controllers\LX\TrainController;
 use App\Http\Controllers\WJC\AdminAuthController;
-use App\Http\Controllers\WJC\NoticeController;
+use App\Http\Controllers\WJC\CourseController;
+use App\Http\Controllers\WJC\HomeworkController;
+use App\Http\Controllers\WJC\PerformanceController;
 use App\Http\Controllers\WJC\SignAuditController;
 use App\Http\Controllers\WJC\SignSwitchController;
+use App\Http\Controllers\WJC\UserManageController;
 use App\Http\Controllers\LX\ApplicationController;
 
 // =======================================================================
@@ -90,27 +93,12 @@ Route::prefix('admin/auth')->middleware('auth:admin_api')->group(function () {
     Route::post('/update_pwd', [AdminAuthController::class, 'updatePwd']);//修改密码
 });
 
-// 4.2 新闻公告 — 公开路由
-Route::prefix('admin/notice')->group(function () {
-    Route::get('/front/list',        [NoticeController::class, 'frontList']);//前台获取公告列表
-    Route::get('/front/detail/{id}', [NoticeController::class, 'frontDetail'])->whereNumber('id');//前台获取公告详情
-});
-
-// 4.2 新闻公告 — 需鉴权路由
-Route::prefix('admin/notice')->middleware('auth:admin_api')->group(function () {
-    Route::post('/create',         [NoticeController::class, 'create']);//创建公告
-    Route::delete('/delete/{id}',  [NoticeController::class, 'delete'])->whereNumber('id');//删除公告
-    Route::put('/update/{id}',     [NoticeController::class, 'update'])->whereNumber('id');//更新公告
-    Route::get('/list',            [NoticeController::class, 'index']);//后台获取公告列表
-    Route::get('/detail/{id}',     [NoticeController::class, 'detail'])->whereNumber('id');//后台获取公告详情
-});
-
-// 4.3 报名开关 /api/v1/admin/sign_switch — 公开路由
+// 4.2 报名开关 /api/v1/admin/sign_switch — 公开路由
 Route::prefix('admin/sign_switch')->group(function () {
     Route::get('/front/get', [SignSwitchController::class, 'frontGet']);//前台查询报名开关
 });
 
-// 4.3 报名开关 — 需鉴权路由
+// 4.2 报名开关 — 需鉴权路由
 Route::prefix('admin/sign_switch')->middleware('auth:admin_api')->group(function () {
     Route::get('/get',    [SignSwitchController::class, 'get']);//查询报名开关
     Route::put('/update', [SignSwitchController::class, 'update']);//修改报名开关
@@ -122,4 +110,43 @@ Route::prefix('admin/sign')->middleware('auth:admin_api')->group(function () {
     Route::get('/detail/{signId}',  [SignAuditController::class, 'detail'])->whereNumber('signId');//报名详情
     Route::put('/cancel/{signId}',  [SignAuditController::class, 'cancel'])->whereNumber('signId');//取消报名
     Route::get('/export',           [SignAuditController::class, 'export']);//导出报名表
+});
+
+// 4.4 课程管理 — 需鉴权
+Route::prefix('admin/course')->middleware('auth:admin_api')->group(function () {
+    Route::post('/create',           [CourseController::class, 'create']);//创建课程
+    Route::put('/update/{courseId}', [CourseController::class, 'update'])->whereNumber('courseId');//编辑
+    Route::delete('/delete/{courseId}', [CourseController::class, 'delete'])->whereNumber('courseId');//删除
+    Route::get('/list',              [CourseController::class, 'index']);//列表
+    Route::get('/detail/{courseId}', [CourseController::class, 'detail'])->whereNumber('courseId');//详情
+    Route::put('/status/{courseId}', [CourseController::class, 'status'])->whereNumber('courseId');//上下架
+});
+
+// 4.5 作业布置 — 需鉴权
+Route::prefix('admin/homework')->middleware('auth:admin_api')->group(function () {
+    Route::post('/create',              [HomeworkController::class, 'create']);//布置作业
+    Route::put('/update/{homeworkId}',  [HomeworkController::class, 'update'])->whereNumber('homeworkId');//编辑
+    Route::delete('/delete/{homeworkId}', [HomeworkController::class, 'delete'])->whereNumber('homeworkId');//删除
+    Route::get('/list',                 [HomeworkController::class, 'index']);//列表
+});
+
+// 4.6 作业批改 — 需鉴权
+Route::prefix('admin/homework/submit')->middleware('auth:admin_api')->group(function () {
+    Route::get('/list',               [HomeworkController::class, 'submitList']);//提交列表
+    Route::get('/detail/{submitId}',  [HomeworkController::class, 'submitDetail'])->whereNumber('submitId');//详情
+    Route::put('/score/{submitId}',   [HomeworkController::class, 'score'])->whereNumber('submitId');//评分
+});
+
+// 4.7 学员账号管理 — 需鉴权
+Route::prefix('admin/user')->middleware('auth:admin_api')->group(function () {
+    Route::get('/list',            [UserManageController::class, 'index']);//列表
+    Route::get('/detail/{userId}', [UserManageController::class, 'detail'])->whereNumber('userId');//详情
+    Route::put('/status/{userId}', [UserManageController::class, 'status'])->whereNumber('userId');//启用禁用
+    Route::post('/create',         [UserManageController::class, 'create']);//创建
+});
+
+// 4.8 学员表现 — 需鉴权
+Route::prefix('admin/performance')->middleware('auth:admin_api')->group(function () {
+    Route::get('/list',             [PerformanceController::class, 'index']);//汇总
+    Route::get('/detail/{userId}',  [PerformanceController::class, 'detail'])->whereNumber('userId');//详情
 });
