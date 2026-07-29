@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Throwable;
+use App\Services\DatabaseLogService;
 use App\Support\Result;
 use App\Enums\ResponseCode;
 use Illuminate\Auth\AuthenticationException;
@@ -121,6 +122,17 @@ class Handler extends \Illuminate\Foundation\Exceptions\Handler
                 'message'  => $e->getMessage(),
             ]);
 
+            DatabaseLogService::logError([
+                'level'             => 'error',
+                'message'           => '数据库异常',
+                'exception_message' => $e->getMessage(),
+                'exception_file'    => $e->getFile(),
+                'exception_line'    => $e->getLine(),
+                'exception_trace'   => $e->getTraceAsString(),
+                'channel'           => 'exception',
+                'context'           => ['sql' => $e->getSql(), 'bindings' => $e->getBindings()],
+            ]);
+
             return Result::error(
                 ResponseCode::DATABASE_ERROR
             );
@@ -132,6 +144,16 @@ class Handler extends \Illuminate\Foundation\Exceptions\Handler
             'file'     => $e->getFile(),
             'line'     => $e->getLine(),
             'trace'    => $e->getTraceAsString(),
+        ]);
+
+        DatabaseLogService::logError([
+            'level'             => 'error',
+            'message'           => '系统异常',
+            'exception_message' => $e->getMessage(),
+            'exception_file'    => $e->getFile(),
+            'exception_line'    => $e->getLine(),
+            'exception_trace'   => $e->getTraceAsString(),
+            'channel'           => 'exception',
         ]);
 
         // 未知异常

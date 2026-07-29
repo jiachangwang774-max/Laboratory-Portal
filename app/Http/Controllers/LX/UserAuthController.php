@@ -24,7 +24,7 @@ class UserAuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $result = $this->authService->login(
-            $request->validated('username'),
+            $request->validated('student_id'),
             $request->validated('password')
         );
         return Result::success('登录成功', $result);

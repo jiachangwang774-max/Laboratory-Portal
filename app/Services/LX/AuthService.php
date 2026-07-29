@@ -22,40 +22,30 @@ class AuthService
     /**
      * 用户登录
      *
-     * 校验用户名密码 → 检查账号状态 → 签发 accessToken
+     * 按学号查找用户 → 校验密码 → 检查账号状态 → 签发 accessToken
      */
-    public function login(string $username, string $password): array
+    public function login(string $studentId, string $password): array
     {
-        $credentials = ['username' => $username, 'password' => $password];
+        $user = SysUser::where('student_id', $studentId)->first();
 
-        try {
-            $accessToken = auth('user_api')->attempt($credentials);
-        } catch (JWTException $e) {
-            $this->logException('JWT 令牌签发异常', $e, ['username' => $username]);
-            throw new BusinessException('登录失败，请稍后重试', ResponseCode::SYSTEM_ERROR);
+        if (!$user || !Hash::check($password, $user->password)) {
+            $this->logLogin('用户登录', 0, $studentId, 0, '学号或密码错误');
+            throw new BusinessException('学号或密码错误', ResponseCode::PASSWORD_ERROR);
         }
-
-        if (!$accessToken) {
-            $this->logBusiness('用户登录失败-密码错误', ['username' => $username]);
-            throw new BusinessException('用户名或密码错误', ResponseCode::PASSWORD_ERROR);
-        }
-
-        /** @var SysUser $user */
-        $user = auth('user_api')->user();
 
         if ($user->status !== 1) {
-            auth('user_api')->logout();
-            $this->logBusiness('禁用账号尝试登录', [
-                'user_id'  => $user->user_id,
-                'username' => $user->username,
-            ]);
+            $this->logLogin('用户登录', $user->user_id, $user->username, 0, '账号已被禁用');
             throw new BusinessException('账号已被禁用，请联系管理员', ResponseCode::ACCOUNT_DISABLED);
         }
 
-        $this->logBusiness('用户登录成功', [
-            'user_id'  => $user->user_id,
-            'username' => $user->username,
-        ]);
+        try {
+            $accessToken = auth('user_api')->login($user);
+        } catch (JWTException $e) {
+            $this->logException('JWT 令牌签发异常', $e, ['studentId' => $studentId]);
+            throw new BusinessException('登录失败，请稍后重试', ResponseCode::SYSTEM_ERROR);
+        }
+
+        $this->logLogin('用户登录', $user->user_id, $user->username, 1);
 
         return [
             'accessToken'  => $accessToken,

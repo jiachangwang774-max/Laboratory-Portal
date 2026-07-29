@@ -33,7 +33,7 @@ class AdminAuthService
         }
 
         if (!$accessToken) {
-            $this->logBusiness('管理员登录失败-密码错误', ['admin_name' => $adminName]);
+            $this->logLogin('管理员登录', 0, $adminName, 0, '管理员账号或密码错误');
             throw new BusinessException('管理员账号或密码错误', ResponseCode::PASSWORD_ERROR);
         }
 
@@ -42,17 +42,11 @@ class AdminAuthService
 
         if ($admin->status !== 1) {
             auth('admin_api')->logout();
-            $this->logBusiness('禁用管理员账号尝试登录', [
-                'admin_id'   => $admin->admin_id,
-                'admin_name' => $admin->admin_name,
-            ]);
+            $this->logLogin('管理员登录', $admin->admin_id, $admin->admin_name, 0, '管理员账号已被禁用');
             throw new BusinessException('管理员账号已被禁用', ResponseCode::ACCOUNT_DISABLED);
         }
 
-        $this->logBusiness('管理员登录成功', [
-            'admin_id'   => $admin->admin_id,
-            'admin_name' => $admin->admin_name,
-        ]);
+        $this->logLogin('管理员登录', $admin->admin_id, $admin->admin_name, 1);
 
         return [
             'accessToken' => $accessToken,

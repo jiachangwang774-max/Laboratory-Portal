@@ -81,6 +81,7 @@ class CourseService
         if (!$course) throw new BusinessException('课程不存在', ResponseCode::DATA_NOT_FOUND);
         $course->status = $status;
         $course->save();
+        $this->logBusiness($status ? '课程上架' : '课程下架', ['course_id' => $courseId]);
         return ['courseId' => $course->course_id, 'status' => $status, 'statusText' => $status ? '已上架' : '已下架'];
     }
 }

@@ -37,6 +37,7 @@ class HomeworkService
         if (isset($data['deadline'])) $hw->deadline = $data['deadline'];
         $hw->save();
 
+        $this->logBusiness('管理员编辑作业', ['homework_id' => $homeworkId]);
         return ['homeworkId' => $hw->homework_id, 'homeworkTitle' => $hw->homework_title];
     }
 

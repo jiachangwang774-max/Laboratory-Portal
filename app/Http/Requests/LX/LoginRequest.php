@@ -14,17 +14,17 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username' => 'required|string|max:50',
-            'password' => 'required|string',
+            'student_id' => 'required|string|max:50',
+            'password'   => 'required|string',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'username.required' => '用户名不能为空',
-            'username.max'      => '用户名不能超过50个字符',
-            'password.required' => '密码不能为空',
+            'student_id.required' => '学号不能为空',
+            'student_id.max'      => '学号不能超过50个字符',
+            'password.required'   => '密码不能为空',
         ];
     }
 }
