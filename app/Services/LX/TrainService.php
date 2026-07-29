@@ -8,6 +8,7 @@ use App\Models\HomeworkSubmit;
 use App\Models\TrainCourse;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
+use App\Models\TrainTraining;
 use App\Traits\LogTrait;
 
 class TrainService
@@ -15,30 +16,43 @@ class TrainService
     use LogTrait;
 
     /**
-     * 培训课程分页列表
+     * 培训课程详情
      *
-     * 仅返回 status=1 的上架课程，按创建时间倒序
+     * 仅返回 status=1 的上架课程
      */
-    public function courseList(int $page = 1, int $size = 10): array
+    public function courseDetail(int $courseId): array
     {
-        $query = TrainCourse::enabled()->orderBy('create_time', 'desc');
+        $course = TrainCourse::enabled()->find($courseId);
 
-        $total = $query->count();
-        $list  = $query->forPage($page, $size)->get()->map(function (TrainCourse $course) {
-            return [
-                'courseId'   => $course->course_id,
-                'courseName' => $course->course_name,
-                'courseDesc' => $course->course_desc,
-                'coverImg'   => $course->cover_img,
-                'startTime'  => $course->start_time,
-                'endTime'    => $course->end_time,
-                'maxSign'    => $course->max_sign,
-            ];
-        });
+        if (!$course) {
+            throw new BusinessException('课程不存在或已下架', ResponseCode::DATA_NOT_FOUND);
+        }
 
         return [
-            'total' => $total,
-            'list'  => $list->values(),
+            'courseName' => $course->course_name,
+            'courseDesc' => $course->course_desc,
+            'instructor' => $course->instructor,
+            'courseDate' => $course->course_date,
+            'location'   => $course->location,
+        ];
+    }
+
+    /**
+     * 培训详情
+     *
+     * 仅返回 status=1 的培训
+     */
+    public function trainingDetail(int $trainingId): array
+    {
+        $training = TrainTraining::enabled()->find($trainingId);
+
+        if (!$training) {
+            throw new BusinessException('培训不存在或已下架', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        return [
+            'trainingTime'    => $training->training_time,
+            'trainingContent' => $training->training_content,
         ];
     }
 

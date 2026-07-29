@@ -89,7 +89,7 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 60), // access token: 60 minutes
+    'ttl' => env('JWT_TTL', 10080), // access token: 7 days
 
     /*
     |--------------------------------------------------------------------------

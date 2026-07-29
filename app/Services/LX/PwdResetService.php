@@ -18,10 +18,19 @@ class PwdResetService
     /**
      * 重置密码
      *
-     * 验证码校验 → 检查历史复用 → 更新密码 → 记录历史 → 删除已用验证码
+     * 学号+邮箱校验身份 → 验证码校验 → 检查历史复用 → 更新密码 → 记录历史 → 删除已用验证码
      */
-    public function resetPwd(string $email, string $code, string $newPwd): void
+    public function resetPwd(string $studentId, string $email, string $code, string $newPwd): void
     {
+        // 通过学号和邮箱双重校验确认用户身份
+        $user = SysUser::where('student_id', $studentId)
+            ->where('email', $email)
+            ->first();
+
+        if (!$user) {
+            throw new BusinessException('学号与邮箱不匹配，用户不存在', ResponseCode::DATA_NOT_FOUND);
+        }
+
         $verifyCode = VerifyCode::where('target', $email)
             ->where('code', $code)
             ->where('type', VerifyCodeType::PWD_RESET->value)
@@ -30,12 +39,6 @@ class PwdResetService
 
         if (!$verifyCode) {
             throw new BusinessException('验证码错误或已过期', ResponseCode::PARAM_ERROR);
-        }
-
-        $user = SysUser::where('email', $email)->first();
-
-        if (!$user) {
-            throw new BusinessException('用户不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
         // 检查新密码是否与历史密码重复
