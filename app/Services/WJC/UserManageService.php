@@ -36,7 +36,7 @@ class UserManageService
                 'college'   => $u->college,
                 'major'     => $u->major,
                 'grade'     => $u->grade,
-                'phone'     => PhoneHelper::mask($u->phone),
+                'phone'     => PhoneHelper::mask($u->phone ?? ''),
                 'email'     => $u->email,
                 'status'    => $u->status,
                 'createTime'=> $u->create_time,

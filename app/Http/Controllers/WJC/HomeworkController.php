@@ -60,8 +60,9 @@ class HomeworkController extends Controller
         return Result::success('成功', $this->service->submitDetail($submitId));
     }
 
-    public function score(HomeworkScoreRequest $r, int $submitId): JsonResponse
+    public function score(HomeworkScoreRequest $r): JsonResponse
     {
+        $submitId = (int) request()->route('submitId');
         return Result::success('评分成功', $this->service->score(
             $submitId, (int) $r->validated('score'), $r->validated('remark')
         ));
