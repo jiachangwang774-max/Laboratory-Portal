@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\LX;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\LX\CourseListRequest;
 use App\Http\Requests\LX\HomeworkListRequest;
 use App\Http\Requests\LX\HomeworkSubmitRequest;
 use App\Services\LX\TrainService;
@@ -17,15 +16,22 @@ class TrainController extends Controller
     ) {}
 
     /**
-     * 获取培训课程分页列表
-     * GET /api/v1/user/train/course/list
+     * 获取课程详情
+     * GET /api/v1/user/train/course/detail/{id}
      */
-    public function courseList(CourseListRequest $request): JsonResponse
+    public function courseDetail(int $id): JsonResponse
     {
-        $data = $this->trainService->courseList(
-            (int) $request->input('page', 1),
-            (int) $request->input('size', 10)
-        );
+        $data = $this->trainService->courseDetail($id);
+        return Result::success('成功', $data);
+    }
+
+    /**
+     * 获取培训详情
+     * GET /api/v1/user/train/training/detail/{id}
+     */
+    public function trainingDetail(int $id): JsonResponse
+    {
+        $data = $this->trainService->trainingDetail($id);
         return Result::success('成功', $data);
     }
 

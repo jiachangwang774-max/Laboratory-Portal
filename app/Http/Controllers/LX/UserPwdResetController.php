@@ -21,6 +21,7 @@ class UserPwdResetController extends Controller
     public function resetPwd(ResetPwdRequest $request): JsonResponse
     {
         $this->pwdResetService->resetPwd(
+            $request->validated('student_id'),
             $request->validated('email'),
             $request->validated('code'),
             $request->validated('newPwd')

@@ -14,6 +14,9 @@ class TrainCourse extends Model
     protected $fillable = [
         'course_name',//课程名称
         'course_desc',//课程描述
+        'instructor',//讲师
+        'course_date',//课程日期
+        'location',//上课地点
         'cover_img',//封面图片
         'start_time',//开始时间
         'end_time',//结束时间
