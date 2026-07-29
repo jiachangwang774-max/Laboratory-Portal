@@ -4,72 +4,59 @@ namespace App\Http\Controllers\WJC;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WJC\SignListRequest;
-use App\Http\Requests\WJC\SingleAuditRequest;
-use App\Http\Requests\WJC\BatchAuditRequest;
 use App\Services\WJC\SignAuditService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class SignAuditController extends Controller
 {
     public function __construct(
-        private SignAuditService $signAuditService
+        private SignAuditService $signService
     ) {}
 
     /**
-     * 获取报名分页列表
-     * GET /api/v1/admin/sign_audit/list
+     * 报名列表
+     * GET /api/v1/admin/sign/list
      */
-    public function list(SignListRequest $request): JsonResponse
+    public function index(SignListRequest $request): JsonResponse
     {
-        $data = $this->signAuditService->list(
+        $data = $this->signService->list(
             (int) $request->input('page', 1),
             (int) $request->input('size', 10),
-            $request->input('auditStatus') !== null ? (int) $request->input('auditStatus') : null,
             $request->input('courseId') ? (int) $request->input('courseId') : null
         );
         return Result::success('成功', $data);
     }
 
     /**
-     * 获取报名详情
-     * GET /api/v1/admin/sign_audit/detail/{signId}
+     * 报名详情
+     * GET /api/v1/admin/sign/detail/{signId}
      */
     public function detail(int $signId): JsonResponse
     {
-        $data = $this->signAuditService->detail($signId);
+        $data = $this->signService->detail($signId);
         return Result::success('成功', $data);
     }
 
     /**
-     * 单条审核报名
-     * PUT /api/v1/admin/sign_audit/single_audit/{signId}
+     * 取消报名
+     * PUT /api/v1/admin/sign/cancel/{signId}
      */
-    public function singleAudit(SingleAuditRequest $request, int $signId): JsonResponse
+    public function cancel(int $signId): JsonResponse
     {
-        $adminId = auth('admin_api')->user()->admin_id;
-        $data = $this->signAuditService->singleAudit(
-            $signId,
-            (int) $request->validated('auditStatus'),
-            $request->validated('auditRemark'),
-            $adminId
-        );
-        return Result::success('单条审核操作完成', $data);
+        $data = $this->signService->cancel($signId);
+        return Result::success('报名已取消', $data);
     }
 
     /**
-     * 批量审核报名
-     * POST /api/v1/admin/sign_audit/batch_audit
+     * 导出报名表
+     * GET /api/v1/admin/sign/export
      */
-    public function batchAudit(BatchAuditRequest $request): JsonResponse
+    public function export(Request $request): JsonResponse
     {
-        $adminId = auth('admin_api')->user()->admin_id;
-        $data = $this->signAuditService->batchAudit(
-            $request->validated('signIdList'),
-            (int) $request->validated('auditStatus'),
-            $request->validated('auditRemark'),
-            $adminId
-        );
-        return Result::success('批量审核完成', $data);
+        $courseId = $request->input('courseId') ? (int) $request->input('courseId') : null;
+        $data = $this->signService->export($courseId);
+        return Result::success('成功', ['list' => $data]);
     }
 }

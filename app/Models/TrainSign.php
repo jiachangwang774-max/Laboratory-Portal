@@ -15,11 +15,8 @@ class TrainSign extends Model
         'user_id',//用户ID
         'course_id',//课程ID
         'sign_info',//报名信息
-        'audit_status',//审核状态
-        'audit_admin',//审核人ID
-        'audit_remark',//审核备注
+        'status',//状态 1正常 0取消
         'sign_time',//报名时间
-        'audit_time',//审核时间
     ];
 
     /**

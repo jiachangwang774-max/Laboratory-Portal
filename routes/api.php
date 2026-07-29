@@ -101,7 +101,7 @@ Route::prefix('admin/notice')->middleware('auth:admin_api')->group(function () {
     Route::post('/create',         [NoticeController::class, 'create']);//创建公告
     Route::delete('/delete/{id}',  [NoticeController::class, 'delete'])->whereNumber('id');//删除公告
     Route::put('/update/{id}',     [NoticeController::class, 'update'])->whereNumber('id');//更新公告
-    Route::get('/list',            [NoticeController::class, 'list']);//后台获取公告列表
+    Route::get('/list',            [NoticeController::class, 'index']);//后台获取公告列表
     Route::get('/detail/{id}',     [NoticeController::class, 'detail'])->whereNumber('id');//后台获取公告详情
 });
 
@@ -116,10 +116,10 @@ Route::prefix('admin/sign_switch')->middleware('auth:admin_api')->group(function
     Route::put('/update', [SignSwitchController::class, 'update']);//修改报名开关
 });
 
-// 4.4 报名审核 /api/v1/admin/sign_audit — 需鉴权路由
-Route::prefix('admin/sign_audit')->middleware('auth:admin_api')->group(function () {
-    Route::get('/list',                  [SignAuditController::class, 'list']);//获取报名列表
-    Route::get('/detail/{signId}',       [SignAuditController::class, 'detail'])->whereNumber('signId');//获取报名详情
-    Route::put('/single_audit/{signId}', [SignAuditController::class, 'singleAudit'])->whereNumber('signId');//单条审核
-    Route::post('/batch_audit',          [SignAuditController::class, 'batchAudit']);//批量审核
+// 4.5 报名管理 /api/v1/admin/sign — 需鉴权路由
+Route::prefix('admin/sign')->middleware('auth:admin_api')->group(function () {
+    Route::get('/list',             [SignAuditController::class, 'index']);//报名列表
+    Route::get('/detail/{signId}',  [SignAuditController::class, 'detail'])->whereNumber('signId');//报名详情
+    Route::put('/cancel/{signId}',  [SignAuditController::class, 'cancel'])->whereNumber('signId');//取消报名
+    Route::get('/export',           [SignAuditController::class, 'export']);//导出报名表
 });

@@ -51,7 +51,7 @@ class NoticeController extends Controller
      * 后台获取公告列表
      * GET /api/v1/admin/notice/list
      */
-    public function list(NoticeListRequest $request): JsonResponse
+    public function index(NoticeListRequest $request): JsonResponse
     {
         $data = $this->noticeService->list(
             (int) $request->input('page', 1),

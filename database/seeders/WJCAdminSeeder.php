@@ -130,7 +130,7 @@ class WJCAdminSeeder extends Seeder
             ['user_id' => $user1->user_id, 'course_id' => $course1->course_id],
             [
                 'sign_info'    => '本人有C语言基础，希望参与实训',
-                'audit_status' => 0,
+                'status' => 1,
                 'sign_time'    => '2026-07-24 10:00:00',
             ]
         );
@@ -139,7 +139,7 @@ class WJCAdminSeeder extends Seeder
             ['user_id' => $user2->user_id, 'course_id' => $course1->course_id],
             [
                 'sign_info'    => '学过51单片机',
-                'audit_status' => 0,
+                'status' => 1,
                 'sign_time'    => '2026-07-24 11:00:00',
             ]
         );
@@ -148,7 +148,7 @@ class WJCAdminSeeder extends Seeder
             ['user_id' => $user3->user_id, 'course_id' => $course2->course_id],
             [
                 'sign_info'    => null,
-                'audit_status' => 0,
+                'status' => 1,
                 'sign_time'    => '2026-07-25 09:00:00',
             ]
         );
@@ -156,24 +156,18 @@ class WJCAdminSeeder extends Seeder
         TrainSign::firstOrCreate(
             ['user_id' => $user1->user_id, 'course_id' => $course2->course_id],
             [
-                'sign_info'    => '对数据分析感兴趣',
-                'audit_status' => 1,
-                'audit_admin'  => $admin1->admin_id,
-                'audit_remark' => '审核通过，按时上课',
-                'sign_time'    => '2026-07-20 14:00:00',
-                'audit_time'   => '2026-07-21 09:30:00',
+                'sign_info' => '对数据分析感兴趣',
+                'status'    => 1,
+                'sign_time' => '2026-07-20 14:00:00',
             ]
         );
 
         TrainSign::firstOrCreate(
             ['user_id' => $user2->user_id, 'course_id' => $course2->course_id],
             [
-                'sign_info'    => '',
-                'audit_status' => 2,
-                'audit_admin'  => $admin1->admin_id,
-                'audit_remark' => '名额已满',
-                'sign_time'    => '2026-07-20 15:00:00',
-                'audit_time'   => '2026-07-21 10:00:00',
+                'sign_info' => '',
+                'status'    => 1,
+                'sign_time' => '2026-07-20 15:00:00',
             ]
         );
 

@@ -6,51 +6,45 @@ use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\TrainSign;
 use App\Traits\LogTrait;
-use Illuminate\Support\Facades\DB;
 
 class SignAuditService
 {
     use LogTrait;
 
     /**
-     * 获取报名分页列表
+     * 报名分页列表
      */
-    public function list(int $page = 1, int $size = 10, ?int $auditStatus = null, ?int $courseId = null): array
+    public function list(int $page = 1, int $size = 10, ?int $courseId = null): array
     {
         $query = TrainSign::with(['user', 'course'])
             ->orderBy('sign_time', 'desc');
-
-        if ($auditStatus !== null) {
-            $query->where('audit_status', $auditStatus);
-        }
 
         if ($courseId) {
             $query->where('course_id', $courseId);
         }
 
         $total = $query->count();
-        $list  = $query->forPage($page, $size)->get()->map(function (TrainSign $sign) {
+        $list = $query->forPage($page, $size)->get()->map(function (TrainSign $sign) {
             return [
                 'signId'      => $sign->sign_id,
                 'userId'      => $sign->user_id,
                 'realName'    => $sign->user->real_name ?? '',
+                'studentId'   => $sign->user->student_id ?? '',
+                'college'     => $sign->user->college ?? '',
+                'major'       => $sign->user->major ?? '',
                 'courseId'    => $sign->course_id,
                 'courseName'  => $sign->course->course_name ?? '',
                 'signInfo'    => $sign->sign_info,
-                'auditStatus' => $sign->audit_status,
-                'statusText'  => $this->auditStatusText($sign->audit_status),
+                'status'      => $sign->status,
                 'signTime'    => $sign->sign_time,
             ];
         });
 
-        return [
-            'total' => $total,
-            'list'  => $list->values(),
-        ];
+        return ['total' => $total, 'list' => $list->values()];
     }
 
     /**
-     * 获取报名详情
+     * 报名详情
      */
     public function detail(int $signId): array
     {
@@ -64,18 +58,21 @@ class SignAuditService
             'signId'       => $sign->sign_id,
             'userRealName' => $sign->user->real_name ?? '',
             'userPhone'    => $sign->user->phone ?? '',
+            'userEmail'    => $sign->user->email ?? '',
+            'studentId'    => $sign->user->student_id ?? '',
+            'college'      => $sign->user->college ?? '',
+            'major'        => $sign->user->major ?? '',
             'courseName'   => $sign->course->course_name ?? '',
             'signInfo'     => $sign->sign_info,
-            'auditStatus'  => $sign->audit_status,
-            'auditRemark'  => $sign->audit_remark,
+            'status'       => $sign->status,
             'signTime'     => $sign->sign_time,
         ];
     }
 
     /**
-     * 单条审核报名
+     * 取消报名
      */
-    public function singleAudit(int $signId, int $auditStatus, ?string $auditRemark, int $adminId): array
+    public function cancel(int $signId): array
     {
         $sign = TrainSign::find($signId);
 
@@ -83,77 +80,46 @@ class SignAuditService
             throw new BusinessException('报名记录不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
-        if ($sign->audit_status !== 0) {
-            throw new BusinessException('该报名记录已审核，请勿重复操作', ResponseCode::DUPLICATE_SUBMIT);
+        if ($sign->status === 0) {
+            throw new BusinessException('该报名已被取消', ResponseCode::DUPLICATE_SUBMIT);
         }
 
-        $sign->audit_status = $auditStatus;
-        $sign->audit_admin  = $adminId;
-        $sign->audit_remark = $auditRemark;
-        $sign->audit_time   = now();
+        $adminId = auth('admin_api')->user()->admin_id;
+
+        $sign->status = 0;
         $sign->save();
 
-        $this->logBusiness('管理员单条审核报名', [
-            'admin_id'     => $adminId,
-            'sign_id'      => $signId,
-            'audit_status' => $auditStatus,
+        $this->logBusiness('管理员取消报名', [
+            'admin_id' => $adminId,
+            'sign_id'  => $signId,
         ]);
 
-        return [
-            'signId'      => $sign->sign_id,
-            'auditStatus' => $sign->audit_status,
-            'statusText'  => $this->auditStatusText($sign->audit_status),
-        ];
+        return ['signId' => $sign->sign_id, 'status' => 0];
     }
 
     /**
-     * 批量审核报名
+     * 导出报名表（返回数据供Controller生成Excel）
      */
-    public function batchAudit(array $signIdList, int $auditStatus, ?string $auditRemark, int $adminId): array
+    public function export(?int $courseId = null): array
     {
-        $successCount = 0;
+        $query = TrainSign::with(['user', 'course'])->where('status', 1);
 
-        // 先查出所有待审核的报名记录
-        $signs = TrainSign::whereIn('sign_id', $signIdList)
-            ->where('audit_status', 0)
-            ->get();
-
-        if ($signs->isEmpty()) {
-            throw new BusinessException('没有可审核的报名记录', ResponseCode::DATA_NOT_FOUND);
+        if ($courseId) {
+            $query->where('course_id', $courseId);
         }
 
-        foreach ($signs as $sign) {
-            $sign->audit_status = $auditStatus;
-            $sign->audit_admin  = $adminId;
-            $sign->audit_remark = $auditRemark;
-            $sign->audit_time   = now();
-            $sign->save();
-            $successCount++;
-        }
-
-        $skippedCount = count($signIdList) - $successCount;
-
-        $this->logBusiness('管理员批量审核报名', [
-            'admin_id'      => $adminId,
-            'total'         => count($signIdList),
-            'success_count' => $successCount,
-            'skipped_count' => $skippedCount,
-            'audit_status'  => $auditStatus,
-        ]);
-
-        return [
-            'successCount' => $successCount,
-            'skippedCount' => $skippedCount,
-        ];
-    }
-
-    private function auditStatusText(int $status): string
-    {
-        return match ($status) {
-            0 => '待审核',
-            1 => '审核通过',
-            2 => '审核驳回',
-            default => '未知',
-        };
+        return $query->orderBy('sign_time', 'desc')->get()->map(function (TrainSign $sign) {
+            return [
+                '姓名'     => $sign->user->real_name ?? '',
+                '学号'     => $sign->user->student_id ?? '',
+                '学院'     => $sign->user->college ?? '',
+                '专业'     => $sign->user->major ?? '',
+                '手机号'   => $sign->user->phone ?? '',
+                '邮箱'     => $sign->user->email ?? '',
+                '课程'     => $sign->course->course_name ?? '',
+                '报名信息' => $sign->sign_info ?? '',
+                '报名时间' => $sign->sign_time,
+            ];
+        })->toArray();
     }
 }
