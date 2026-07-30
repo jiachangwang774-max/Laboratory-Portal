@@ -24,6 +24,9 @@ class CourseService
         $course = TrainCourse::create([
             'course_name'  => $data['courseName'],
             'course_desc'  => $data['courseDesc'] ?? '',
+            'instructor'   => $data['instructor'] ?? null,
+            'course_date'  => $data['courseDate'] ?? null,
+            'location'     => $data['location'] ?? null,
             'cover_img'    => $coverImg,
             'start_time'   => $data['startTime'] ?? null,
             'end_time'     => $data['endTime'] ?? null,
@@ -47,9 +50,9 @@ class CourseService
             $course->cover_img = $this->uploadCover(request()->file('cover'));
         }
 
-        $map = ['courseName' => 'course_name', 'courseDesc' => 'course_desc', 'coverImg' => 'cover_img', 'startTime' => 'start_time', 'endTime' => 'end_time', 'maxSign' => 'max_sign', 'status' => 'status'];
+        $map = ['courseName' => 'course_name', 'courseDesc' => 'course_desc', 'instructor' => 'instructor', 'courseDate' => 'course_date', 'location' => 'location', 'coverImg' => 'cover_img', 'startTime' => 'start_time', 'endTime' => 'end_time', 'maxSign' => 'max_sign', 'status' => 'status'];
         foreach ($map as $key => $col) {
-            if (isset($data[$key])) $course->{$col} = $data[$key];
+            if (array_key_exists($key, $data)) $course->{$col} = $data[$key];
         }
         $course->save();
 
@@ -77,6 +80,9 @@ class CourseService
                 'courseId'    => $c->course_id,
                 'courseName'  => $c->course_name,
                 'courseDesc'  => $c->course_desc,
+                'instructor'  => $c->instructor,
+                'courseDate'  => $c->course_date,
+                'location'    => $c->location,
                 'coverImg'    => $c->cover_img,
                 'startTime'   => $c->start_time,
                 'endTime'     => $c->end_time,
@@ -98,6 +104,9 @@ class CourseService
             'courseId'    => $c->course_id,
             'courseName'  => $c->course_name,
             'courseDesc'  => $c->course_desc,
+            'instructor'  => $c->instructor,
+            'courseDate'  => $c->course_date,
+            'location'    => $c->location,
             'coverImg'    => $c->cover_img,
             'startTime'   => $c->start_time,
             'endTime'     => $c->end_time,
