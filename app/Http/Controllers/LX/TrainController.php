@@ -6,13 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LX\HomeworkListRequest;
 use App\Http\Requests\LX\HomeworkSubmitRequest;
 use App\Services\LX\TrainService;
+use App\Services\WJC\CheckinService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class TrainController extends Controller
 {
     public function __construct(
-        private TrainService $trainService
+        private TrainService $trainService,
+        private CheckinService $checkinService
     ) {}
 
     /**
@@ -120,5 +123,22 @@ class TrainController extends Controller
         $userId = auth('user_api')->user()->user_id;
         $data = $this->trainService->homeworkScored($userId);
         return Result::success('成功', $data);
+    }
+
+    /**
+     * 学生签到
+     * POST /api/v1/user/train/checkin
+     */
+    public function checkin(Request $request): JsonResponse
+    {
+        $userId = auth('user_api')->user()->user_id;
+        $code   = $request->input('code');
+
+        if (!$code || strlen($code) !== 6 || !ctype_digit($code)) {
+            return Result::error('请输入有效的6位签到码', \App\Enums\ResponseCode::PARAM_ERROR);
+        }
+
+        $data = $this->checkinService->studentCheckinByCode($userId, $code);
+        return Result::success('签到成功', $data);
     }
 }

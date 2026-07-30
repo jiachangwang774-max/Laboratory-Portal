@@ -56,6 +56,7 @@ class CheckinService
     {
         $c = CourseCheckin::find($checkinId);
         if (!$c || $c->status !== 1) throw new BusinessException('签到已结束', ResponseCode::BUSINESS_ERROR);
+        if ($c->end_time && now()->gt($c->end_time)) throw new BusinessException('签到已超时', ResponseCode::BUSINESS_ERROR);
         if ($c->checkin_code !== $code) throw new BusinessException('签到码错误', ResponseCode::PARAM_ERROR);
 
         CheckinRecord::firstOrCreate(
@@ -64,6 +65,33 @@ class CheckinService
         );
 
         return ['checkinId' => $checkinId, 'statusText' => '签到成功'];
+    }
+
+    /**
+     * 学生通过签到码签到（无需指定 checkinId）
+     */
+    public function studentCheckinByCode(int $userId, string $code): array
+    {
+        $c = CourseCheckin::where('checkin_code', $code)
+            ->where('status', 1)
+            ->where('end_time', '>', now())
+            ->first();
+
+        if (!$c) throw new BusinessException('签到码无效或签到已结束', ResponseCode::BUSINESS_ERROR);
+
+        CheckinRecord::firstOrCreate(
+            ['checkin_id' => $c->checkin_id, 'user_id' => $userId],
+            ['checkin_method' => 'code', 'checkin_time' => now()]
+        );
+
+        $this->logBusiness('学生扫码签到', ['user_id' => $userId, 'checkin_id' => $c->checkin_id, 'code' => $code]);
+
+        return [
+            'checkinId'  => $c->checkin_id,
+            'courseId'   => $c->course_id,
+            'sessionId'  => $c->session_id,
+            'statusText' => '签到成功',
+        ];
     }
 
     /**

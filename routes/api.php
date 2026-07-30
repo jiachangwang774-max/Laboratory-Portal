@@ -62,6 +62,11 @@ Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
         Route::get('/detail/{session_id}', [TrainController::class, 'trainingSessionDetail'])->whereNumber('session_id');//获取单个培训详情
     });
 
+    // 签到
+    Route::prefix('checkin')->group(function () {
+        Route::post('/', [TrainController::class, 'checkin']);//学生签到
+    });
+
     // 作业
     Route::prefix('homework')->group(function () {
         Route::get('/list',                       [TrainController::class, 'homeworkList']);//获取作业列表
