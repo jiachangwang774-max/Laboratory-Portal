@@ -6,6 +6,7 @@ use App\Http\Controllers\LX\UserAuthController;
 use App\Http\Controllers\LX\UserPwdResetController;
 use App\Http\Controllers\LX\TrainController;
 use App\Http\Controllers\WJC\AdminAuthController;
+use App\Http\Controllers\WJC\CheckinController;
 use App\Http\Controllers\WJC\CourseController;
 use App\Http\Controllers\WJC\HomeworkController;
 use App\Http\Controllers\WJC\PerformanceController;
@@ -175,3 +176,14 @@ Route::prefix('admin/performance')->middleware('auth:admin_api')->group(function
     Route::get('/list',             [PerformanceController::class, 'index']);//汇总
     Route::get('/detail/{userId}',  [PerformanceController::class, 'detail'])->whereNumber('userId');//详情
 });
+
+// 4.10 签到管理 — 需鉴权
+Route::prefix('admin/checkin')->middleware('auth:admin_api')->group(function () {
+    Route::post('/create',   [CheckinController::class, 'create']);//发起签到
+    Route::put('/close',     [CheckinController::class, 'close']);//结束签到
+    Route::get('/list',      [CheckinController::class, 'index']);//列表
+    Route::get('/records',   [CheckinController::class, 'records']);//签到明细
+    Route::put('/manual',    [CheckinController::class, 'manual']);//手动签到
+    Route::get('/export',    [CheckinController::class, 'export']);//导出名单
+});
+
