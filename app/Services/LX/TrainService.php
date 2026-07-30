@@ -4,12 +4,13 @@ namespace App\Services\LX;
 
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
+use App\Models\CourseSession;
 use App\Models\HomeworkSubmit;
 use App\Models\TrainCourse;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
-use App\Models\TrainTraining;
 use App\Traits\LogTrait;
+use OSS\OssClient;
 
 class TrainService
 {
@@ -56,22 +57,207 @@ class TrainService
     }
 
     /**
-     * 培训详情
+     * 培训详情列表（所有开放的课程安排）
      *
-     * 仅返回 status=1 的培训
+     * 仅返回 status=1 的课程安排，按排序字段升序
      */
-    public function trainingDetail(int $trainingId): array
+    public function trainingDetail(): array
     {
-        $training = TrainTraining::enabled()->find($trainingId);
+        $sessions = CourseSession::enabled()
+            ->orderBy('sort_order')
+            ->orderBy('session_date')
+            ->get()
+            ->map(function (CourseSession $session) {
+                return [
+                    'sessionId'   => $session->session_id,
+                    'courseId'    => $session->course_id,
+                    'courseName'  => $session->course->course_name ?? '',
+                    'title'       => $session->title,
+                    'content'     => $session->content,
+                    'sessionDate' => $session->session_date,
+                    'endTime'     => $session->end_time,
+                    'location'    => $session->location,
+                    'instructor'  => $session->instructor,
+                ];
+            });
 
-        if (!$training) {
-            throw new BusinessException('培训不存在或已下架', ResponseCode::DATA_NOT_FOUND);
+        return $sessions->values()->toArray();
+    }
+
+    /**
+     * 单个培训详情
+     *
+     * 仅返回 status=1 的课程安排
+     */
+    public function trainingSessionDetail(int $sessionId): array
+    {
+        $session = CourseSession::enabled()->find($sessionId);
+
+        if (!$session) {
+            throw new BusinessException('课程安排不存在或已下架', ResponseCode::DATA_NOT_FOUND);
         }
 
         return [
-            'trainingTime'    => $training->training_time,
-            'trainingContent' => $training->training_content,
+            'sessionId'   => $session->session_id,
+            'courseId'    => $session->course_id,
+            'courseName'  => $session->course->course_name ?? '',
+            'title'       => $session->title,
+            'content'     => $session->content,
+            'sessionDate' => $session->session_date,
+            'endTime'     => $session->end_time,
+            'location'    => $session->location,
+            'instructor'  => $session->instructor,
         ];
+    }
+
+    /**
+     * 单个作业详情（含当前学生的提交记录、评分、批注）
+     */
+    public function homeworkDetail(int $homeworkId, int $userId): array
+    {
+        $homework = TrainHomework::find($homeworkId);
+
+        if (!$homework) {
+            throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        $submit = HomeworkSubmit::where('user_id', $userId)
+            ->where('homework_id', $homeworkId)
+            ->first();
+
+        return [
+            'homeworkId'      => $homework->homework_id,
+            'courseId'        => $homework->course_id,
+            'courseName'      => $homework->course->course_name ?? '',
+            'homeworkTitle'   => $homework->homework_title,
+            'homeworkContent' => $homework->homework_content,
+            'deadline'        => $homework->deadline,
+            'createTime'      => $homework->create_time,
+            'submitId'        => $submit ? $submit->submit_id : null,
+            'submitContent'   => $submit ? $submit->submit_content : null,
+            'submitFile'      => $submit ? $submit->submit_file : null,
+            'submitTime'      => $submit ? $submit->submit_time : null,
+            'score'           => $submit ? $submit->score : null,
+            'remark'          => $submit ? $submit->remark : null,
+        ];
+    }
+
+    /**
+     * 待完成作业列表（未提交的作业）
+     */
+    public function homeworkPending(int $userId): array
+    {
+        $courseIds = $this->getUserCourseIds($userId);
+
+        if (empty($courseIds)) {
+            return [];
+        }
+
+        // 已提交的作业ID
+        $submittedIds = HomeworkSubmit::where('user_id', $userId)
+            ->pluck('homework_id')
+            ->toArray();
+
+        return TrainHomework::whereIn('course_id', $courseIds)
+            ->whereNotIn('homework_id', $submittedIds)
+            ->orderBy('create_time', 'desc')
+            ->get()
+            ->map(function (TrainHomework $h) {
+                return [
+                    'homeworkId'      => $h->homework_id,
+                    'courseId'        => $h->course_id,
+                    'courseName'      => $h->course->course_name ?? '',
+                    'homeworkTitle'   => $h->homework_title,
+                    'homeworkContent' => $h->homework_content,
+                    'deadline'        => $h->deadline,
+                    'createTime'      => $h->create_time,
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * 待批阅作业列表（已提交但未评分）
+     */
+    public function homeworkSubmitted(int $userId): array
+    {
+        $courseIds = $this->getUserCourseIds($userId);
+
+        if (empty($courseIds)) {
+            return [];
+        }
+
+        $submits = HomeworkSubmit::where('user_id', $userId)
+            ->whereNull('score')
+            ->whereHas('homework', function ($q) use ($courseIds) {
+                $q->whereIn('course_id', $courseIds);
+            })
+            ->with('homework.course')
+            ->orderBy('submit_time', 'desc')
+            ->get()
+            ->map(function (HomeworkSubmit $s) {
+                return [
+                    'submitId'        => $s->submit_id,
+                    'homeworkId'      => $s->homework_id,
+                    'homeworkTitle'   => $s->homework->homework_title ?? '',
+                    'courseId'        => $s->homework->course_id ?? null,
+                    'courseName'      => $s->homework->course->course_name ?? '',
+                    'submitContent'   => $s->submit_content,
+                    'submitFile'      => $s->submit_file,
+                    'submitTime'      => $s->submit_time,
+                ];
+            });
+
+        return $submits->values()->toArray();
+    }
+
+    /**
+     * 已批阅作业列表（已评分）
+     */
+    public function homeworkScored(int $userId): array
+    {
+        $courseIds = $this->getUserCourseIds($userId);
+
+        if (empty($courseIds)) {
+            return [];
+        }
+
+        $submits = HomeworkSubmit::where('user_id', $userId)
+            ->whereNotNull('score')
+            ->whereHas('homework', function ($q) use ($courseIds) {
+                $q->whereIn('course_id', $courseIds);
+            })
+            ->with('homework.course')
+            ->orderBy('submit_time', 'desc')
+            ->get()
+            ->map(function (HomeworkSubmit $s) {
+                return [
+                    'submitId'        => $s->submit_id,
+                    'homeworkId'      => $s->homework_id,
+                    'homeworkTitle'   => $s->homework->homework_title ?? '',
+                    'courseId'        => $s->homework->course_id ?? null,
+                    'courseName'      => $s->homework->course->course_name ?? '',
+                    'submitContent'   => $s->submit_content,
+                    'submitFile'      => $s->submit_file,
+                    'submitTime'      => $s->submit_time,
+                    'score'           => $s->score,
+                    'remark'          => $s->remark,
+                ];
+            });
+
+        return $submits->values()->toArray();
+    }
+
+    /**
+     * 获取用户已报名的课程ID列表
+     */
+    private function getUserCourseIds(int $userId): array
+    {
+        return TrainSign::where('user_id', $userId)
+            ->where('status', 1)
+            ->pluck('course_id')
+            ->toArray();
     }
 
     /**
@@ -147,10 +333,21 @@ class TrainService
             throw new BusinessException('您已提交过该作业', ResponseCode::DUPLICATE_SUBMIT);
         }
 
-        // 处理文件上传
+        // 处理文件上传到 OSS
         $filePath = '';
         if ($file && $file->isValid()) {
-            $filePath = $file->store('homework_files', 'public');
+            $ext    = $file->getClientOriginalExtension();
+            $object = 'homework/' . uniqid() . '.' . $ext;
+
+            $oss = new OssClient(
+                config('filesystems.disks.oss.access_id'),
+                config('filesystems.disks.oss.access_key'),
+                config('filesystems.disks.oss.endpoint'),
+            );
+            $oss->putObject(config('filesystems.disks.oss.bucket'), $object, $file->getContent());
+
+            $filePath = 'https://' . config('filesystems.disks.oss.bucket') . '.'
+                      . config('filesystems.disks.oss.endpoint') . '/' . $object;
         }
 
         $submit = HomeworkSubmit::create([
@@ -169,6 +366,7 @@ class TrainService
 
         return [
             'submitId'   => $submit->submit_id,
+            'submitFile' => $submit->submit_file,
             'submitTime' => $submit->submit_time,
         ];
     }

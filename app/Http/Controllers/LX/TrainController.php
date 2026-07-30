@@ -27,12 +27,22 @@ class TrainController extends Controller
     }
 
     /**
-     * 获取培训详情
-     * GET /api/v1/user/train/training/detail/{id}
+     * 获取培训详情列表（所有开放的课程安排）
+     * GET /api/v1/user/train/training/detail
      */
-    public function trainingDetail(int $id): JsonResponse
+    public function trainingDetail(): JsonResponse
     {
-        $data = $this->trainService->trainingDetail($id);
+        $data = $this->trainService->trainingDetail();
+        return Result::success('成功', $data);
+    }
+
+    /**
+     * 获取单个培训详情
+     * GET /api/v1/user/train/training/detail/{session_id}
+     */
+    public function trainingSessionDetail(int $session_id): JsonResponse
+    {
+        $data = $this->trainService->trainingSessionDetail($session_id);
         return Result::success('成功', $data);
     }
 
@@ -66,5 +76,49 @@ class TrainController extends Controller
             $request->file('file')
         );
         return Result::success('作业提交成功', $data);
+    }
+
+    /**
+     * 获取单个作业详情
+     * GET /api/v1/user/train/homework/detail/{homework_id}
+     */
+    public function homeworkDetail(int $homework_id): JsonResponse
+    {
+        $userId = auth('user_api')->user()->user_id;
+        $data = $this->trainService->homeworkDetail($homework_id, $userId);
+        return Result::success('成功', $data);
+    }
+
+    /**
+     * 待完成作业列表
+     * GET /api/v1/user/train/homework/pending
+     */
+    public function homeworkPending(): JsonResponse
+    {
+        $userId = auth('user_api')->user()->user_id;
+        $data = $this->trainService->homeworkPending($userId);
+        return Result::success('成功', $data);
+    }
+
+    /**
+     * 待批阅作业列表
+     * GET /api/v1/user/train/homework/submitted
+     */
+    public function homeworkSubmitted(): JsonResponse
+    {
+        $userId = auth('user_api')->user()->user_id;
+        $data = $this->trainService->homeworkSubmitted($userId);
+        return Result::success('成功', $data);
+    }
+
+    /**
+     * 已批阅作业列表
+     * GET /api/v1/user/train/homework/scored
+     */
+    public function homeworkScored(): JsonResponse
+    {
+        $userId = auth('user_api')->user()->user_id;
+        $data = $this->trainService->homeworkScored($userId);
+        return Result::success('成功', $data);
     }
 }

@@ -56,13 +56,18 @@ Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
     });
 
     Route::prefix('training')->group(function () {
-        Route::get('/detail/{id}', [TrainController::class, 'trainingDetail'])->whereNumber('id');//获取培训详情
+        Route::get('/detail', [TrainController::class, 'trainingDetail']);//获取培训详情列表
+        Route::get('/detail/{session_id}', [TrainController::class, 'trainingSessionDetail'])->whereNumber('session_id');//获取单个培训详情
     });
 
     // 作业
     Route::prefix('homework')->group(function () {
-        Route::get('/list',   [TrainController::class, 'homeworkList']);//获取作业列表
-        Route::post('/submit', [TrainController::class, 'homeworkSubmit']);//提交作业
+        Route::get('/list',                       [TrainController::class, 'homeworkList']);//获取作业列表
+        Route::get('/detail/{homework_id}',       [TrainController::class, 'homeworkDetail'])->whereNumber('homework_id');//获取单个作业详情
+        Route::get('/pending',                    [TrainController::class, 'homeworkPending']);//待完成作业
+        Route::get('/submitted',                  [TrainController::class, 'homeworkSubmitted']);//待批阅作业
+        Route::get('/scored',                     [TrainController::class, 'homeworkScored']);//已批阅作业
+        Route::post('/submit',                    [TrainController::class, 'homeworkSubmit']);//提交作业
     });
 });
 
