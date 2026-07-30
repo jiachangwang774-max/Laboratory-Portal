@@ -9,6 +9,7 @@ use App\Http\Controllers\WJC\AdminAuthController;
 use App\Http\Controllers\WJC\CourseController;
 use App\Http\Controllers\WJC\HomeworkController;
 use App\Http\Controllers\WJC\PerformanceController;
+use App\Http\Controllers\WJC\SessionController;
 use App\Http\Controllers\WJC\SignAuditController;
 use App\Http\Controllers\WJC\SignSwitchController;
 use App\Http\Controllers\WJC\UserManageController;
@@ -137,7 +138,16 @@ Route::prefix('admin/course')->middleware('auth:admin_api')->group(function () {
     Route::put('/status/{courseId}', [CourseController::class, 'status'])->whereNumber('courseId');//上下架
 });
 
-// 4.5 作业布置 — 需鉴权
+// 4.5 课程安排 — 需鉴权
+Route::prefix('admin/session')->middleware('auth:admin_api')->group(function () {
+    Route::post('/create',                  [SessionController::class, 'create']);//发布安排
+    Route::put('/update/{sessionId}',       [SessionController::class, 'update'])->whereNumber('sessionId');//编辑
+    Route::delete('/delete/{sessionId}',    [SessionController::class, 'delete'])->whereNumber('sessionId');//删除
+    Route::get('/list',                     [SessionController::class, 'index']);//列表
+    Route::get('/detail/{sessionId}',       [SessionController::class, 'detail'])->whereNumber('sessionId');//详情
+});
+
+// 4.6 作业布置 — 需鉴权
 Route::prefix('admin/homework')->middleware('auth:admin_api')->group(function () {
     Route::post('/create',              [HomeworkController::class, 'create']);//布置作业
     Route::put('/update/{homeworkId}',  [HomeworkController::class, 'update'])->whereNumber('homeworkId');//编辑

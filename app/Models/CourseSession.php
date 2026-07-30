@@ -8,7 +8,6 @@ class CourseSession extends Model
 {
     protected $table = 'course_sessions';
     protected $primaryKey = 'session_id';
-
     public $timestamps = false;
 
     protected $fillable = [
@@ -36,6 +35,13 @@ class CourseSession extends Model
     /**
      * 关联课程
      */
+    public $timestamps = false;
+
+    protected $fillable = [
+        'course_id', 'title', 'content', 'session_date', 'end_time',
+        'location', 'instructor', 'status', 'sort_order',
+        'create_admin', 'create_time', 'update_time',
+    ];
     public function course()
     {
         return $this->belongsTo(TrainCourse::class, 'course_id', 'course_id');

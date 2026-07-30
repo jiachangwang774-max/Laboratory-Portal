@@ -68,7 +68,9 @@ class CourseController extends Controller
             config('filesystems.disks.oss.access_key'),
             config('filesystems.disks.oss.endpoint'),
         );
-        $oss->putObject(config('filesystems.disks.oss.bucket'), $object, $file->getContent());
+        $oss->putObject(config('filesystems.disks.oss.bucket'), $object, $file->getContent(), [
+            OssClient::OSS_HEADERS => ['Content-Disposition' => 'inline'],
+        ]);
 
         $url = 'https://' . config('filesystems.disks.oss.bucket') . '.'
              . config('filesystems.disks.oss.endpoint') . '/' . $object;
