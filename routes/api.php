@@ -119,6 +119,7 @@ Route::prefix('admin/sign')->middleware('auth:admin_api')->group(function () {
 // 4.4 课程管理 — 需鉴权
 Route::prefix('admin/course')->middleware('auth:admin_api')->group(function () {
     Route::post('/create',           [CourseController::class, 'create']);//创建课程
+    Route::post('/upload_cover',     [CourseController::class, 'uploadCover']);//上传封面到OSS
     Route::put('/update/{courseId}', [CourseController::class, 'update'])->whereNumber('courseId');//编辑
     Route::delete('/delete/{courseId}', [CourseController::class, 'delete'])->whereNumber('courseId');//删除
     Route::get('/list',              [CourseController::class, 'index']);//列表
