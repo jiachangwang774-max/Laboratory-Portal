@@ -11,6 +11,7 @@ use App\Http\Requests\WJC\UploadCoverRequest;
 use App\Services\WJC\CourseService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
+use OSS\OssClient;
 
 class CourseController extends Controller
 {
@@ -62,7 +63,7 @@ class CourseController extends Controller
         $ext    = $file->getClientOriginalExtension();
         $object = 'course-covers/' . uniqid() . '.' . $ext;
 
-        $oss = new \OSS\OssClient(
+        $oss = new OssClient(
             config('filesystems.disks.oss.access_id'),
             config('filesystems.disks.oss.access_key'),
             config('filesystems.disks.oss.endpoint'),

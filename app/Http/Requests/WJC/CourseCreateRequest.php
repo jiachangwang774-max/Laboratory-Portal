@@ -13,6 +13,9 @@ class CourseCreateRequest extends FormRequest
         return [
             'courseName' => 'required|string|max:100',
             'courseDesc' => 'nullable|string',
+            'instructor' => 'nullable|string|max:50',
+            'courseDate' => 'nullable|string|max:100',
+            'location'   => 'nullable|string|max:200',
             'coverImg'   => 'nullable|string|max:255',
             'cover'      => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'startTime'  => 'nullable|date',
