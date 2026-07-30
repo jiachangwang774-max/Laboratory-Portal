@@ -14,6 +14,7 @@ class CourseUpdateRequest extends FormRequest
             'courseName' => 'nullable|string|max:100',
             'courseDesc' => 'nullable|string',
             'coverImg'   => 'nullable|string|max:255',
+            'cover'      => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'startTime'  => 'nullable|date',
             'endTime'    => 'nullable|date',
             'maxSign'    => 'nullable|integer|min:1',
