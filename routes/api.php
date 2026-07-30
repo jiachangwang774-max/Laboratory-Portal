@@ -52,7 +52,7 @@ Route::prefix('user/auth')->middleware('auth:user_api')->group(function () {
 // 3.4 用户端培训 /api/v1/user/train
 Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
     Route::prefix('course')->group(function () {
-        Route::get('/detail/{id}', [TrainController::class, 'courseDetail'])->whereNumber('id');//获取课程详情
+        Route::get('/detail/{course_id}', [TrainController::class, 'courseDetail'])->whereNumber('course_id');//获取课程详情
     });
 
     Route::prefix('training')->group(function () {

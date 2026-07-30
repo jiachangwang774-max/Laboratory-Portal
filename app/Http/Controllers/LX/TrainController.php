@@ -16,12 +16,13 @@ class TrainController extends Controller
     ) {}
 
     /**
-     * 获取课程详情
+     * 获取课程详情（学生端）
      * GET /api/v1/user/train/course/detail/{id}
      */
-    public function courseDetail(int $id): JsonResponse
+    public function courseDetail(int $course_id): JsonResponse
     {
-        $data = $this->trainService->courseDetail($id);
+        $userId = auth('user_api')->user()->user_id;
+        $data = $this->trainService->courseDetail($course_id, $userId);
         return Result::success('成功', $data);
     }
 

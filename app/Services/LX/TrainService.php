@@ -16,11 +16,11 @@ class TrainService
     use LogTrait;
 
     /**
-     * 培训课程详情
+     * 学生端课程详情
      *
-     * 仅返回 status=1 的上架课程
+     * 仅返回 status=1 的上架课程，同时返回当前学生的报名状态
      */
-    public function courseDetail(int $courseId): array
+    public function courseDetail(int $courseId, int $userId): array
     {
         $course = TrainCourse::enabled()->find($courseId);
 
@@ -28,12 +28,30 @@ class TrainService
             throw new BusinessException('课程不存在或已下架', ResponseCode::DATA_NOT_FOUND);
         }
 
+        // 查询当前学生对该课程的报名状态
+        $sign = TrainSign::where('user_id', $userId)
+            ->where('course_id', $courseId)
+            ->first();
+
+        // 已报名人数
+        $signCount = TrainSign::where('course_id', $courseId)
+            ->where('status', 1)
+            ->count();
+
         return [
-            'courseName' => $course->course_name,
-            'courseDesc' => $course->course_desc,
-            'instructor' => $course->instructor,
-            'courseDate' => $course->course_date,
-            'location'   => $course->location,
+            'courseId'    => $course->course_id,
+            'courseName'  => $course->course_name,
+            'courseDesc'  => $course->course_desc,
+            'coverImg'    => $course->cover_img,
+            'instructor'  => $course->instructor,
+            'courseDate'  => $course->course_date,
+            'location'    => $course->location,
+            'startTime'   => $course->start_time,
+            'endTime'     => $course->end_time,
+            'maxSign'     => $course->max_sign,
+            'signCount'   => $signCount,
+            'signStatus'  => $sign ? $sign->status : null,   // null=未报名, 1=已报名, 0=已取消
+            'signTime'    => $sign ? $sign->sign_time : null,
         ];
     }
 
@@ -64,7 +82,7 @@ class TrainService
     public function homeworkList(int $userId, int $page = 1, int $size = 10, ?int $courseId = null): array
     {
         $approvedCourseIds = TrainSign::where('user_id', $userId)
-            ->where('audit_status', 1)
+            ->where('status', 1)
             ->pluck('course_id');
 
         if ($approvedCourseIds->isEmpty()) {
@@ -110,10 +128,10 @@ class TrainService
             throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
-        // 校验用户已通过该课程审核
+        // 校验用户已报名该课程
         $approved = TrainSign::where('user_id', $userId)
             ->where('course_id', $homework->course_id)
-            ->where('audit_status', 1)
+            ->where('status', 1)
             ->exists();
 
         if (!$approved) {
