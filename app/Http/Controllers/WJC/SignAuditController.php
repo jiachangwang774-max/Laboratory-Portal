@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\WJC;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\WJC\SignAuditRequest;
 use App\Http\Requests\WJC\SignListRequest;
 use App\Services\WJC\SignAuditService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class SignAuditController extends Controller
 {
@@ -16,7 +16,7 @@ class SignAuditController extends Controller
     ) {}
 
     /**
-     * 报名列表
+     * 报名申请列表
      * GET /api/v1/admin/sign/list
      */
     public function index(SignListRequest $request): JsonResponse
@@ -24,39 +24,38 @@ class SignAuditController extends Controller
         $data = $this->signService->list(
             (int) $request->input('page', 1),
             (int) $request->input('size', 10),
-            $request->input('courseId') ? (int) $request->input('courseId') : null
+            $request->input('auditStatus') !== null ? (int) $request->input('auditStatus') : null
         );
         return Result::success('成功', $data);
     }
 
     /**
-     * 报名详情
-     * GET /api/v1/admin/sign/detail/{signId}
+     * 报名申请详情
+     * GET /api/v1/admin/sign/detail/{id}
      */
-    public function detail(int $signId): JsonResponse
+    public function detail(int $id): JsonResponse
     {
-        $data = $this->signService->detail($signId);
+        $data = $this->signService->detail($id);
         return Result::success('成功', $data);
     }
 
     /**
-     * 取消报名
-     * PUT /api/v1/admin/sign/cancel/{signId}
+     * 审核通过
+     * PUT /api/v1/admin/sign/approve/{id}
      */
-    public function cancel(int $signId): JsonResponse
+    public function approve(int $id): JsonResponse
     {
-        $data = $this->signService->cancel($signId);
-        return Result::success('报名已取消', $data);
+        $data = $this->signService->approve($id);
+        return Result::success('审核通过', $data);
     }
 
     /**
-     * 导出报名表
-     * GET /api/v1/admin/sign/export
+     * 审核驳回
+     * PUT /api/v1/admin/sign/reject/{id}
      */
-    public function export(Request $request): JsonResponse
+    public function reject(SignAuditRequest $request, int $id): JsonResponse
     {
-        $courseId = $request->input('courseId') ? (int) $request->input('courseId') : null;
-        $data = $this->signService->export($courseId);
-        return Result::success('成功', ['list' => $data]);
+        $data = $this->signService->reject($id, $request->validated('remark'));
+        return Result::success('已驳回', $data);
     }
 }

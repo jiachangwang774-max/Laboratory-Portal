@@ -4,7 +4,7 @@ namespace App\Services\WJC;
 
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
-use App\Models\TrainSign;
+use App\Models\SignApplication;
 use App\Traits\LogTrait;
 
 class SignAuditService
@@ -12,31 +12,32 @@ class SignAuditService
     use LogTrait;
 
     /**
-     * 报名分页列表
+     * 报名申请分页列表（仅已提交 status=1）
      */
-    public function list(int $page = 1, int $size = 10, ?int $courseId = null): array
+    public function list(int $page = 1, int $size = 10, ?int $auditStatus = null): array
     {
-        $query = TrainSign::with(['user', 'course'])
-            ->orderBy('sign_time', 'desc');
+        $query = SignApplication::where('status', 1)
+            ->orderBy('submit_time', 'desc');
 
-        if ($courseId) {
-            $query->where('course_id', $courseId);
+        if ($auditStatus !== null) {
+            $query->where('audit_status', $auditStatus);
         }
 
         $total = $query->count();
-        $list = $query->forPage($page, $size)->get()->map(function (TrainSign $sign) {
+        $list = $query->forPage($page, $size)->get()->map(function (SignApplication $app) {
             return [
-                'signId'      => $sign->sign_id,
-                'userId'      => $sign->user_id,
-                'realName'    => $sign->user->real_name ?? '',
-                'studentId'   => $sign->user->student_id ?? '',
-                'college'     => $sign->user->college ?? '',
-                'major'       => $sign->user->major ?? '',
-                'courseId'    => $sign->course_id,
-                'courseName'  => $sign->course->course_name ?? '',
-                'signInfo'    => $sign->sign_info,
-                'status'      => $sign->status,
-                'signTime'    => $sign->sign_time,
+                'id'              => $app->id,
+                'name'            => $app->name,
+                'studentId'       => $app->student_id,
+                'department'      => $app->department,
+                'college'         => $app->college,
+                'major'           => $app->major,
+                'className'       => $app->class_name,
+                'phone'           => $app->phone,
+                'auditStatus'     => $app->audit_status,
+                'auditRemark'     => $app->audit_remark,
+                'auditTime'       => $app->audit_time,
+                'submitTime'      => $app->submit_time,
             ];
         });
 
@@ -44,82 +45,105 @@ class SignAuditService
     }
 
     /**
-     * 报名详情
+     * 报名申请详情
      */
-    public function detail(int $signId): array
+    public function detail(int $id): array
     {
-        $sign = TrainSign::with(['user', 'course'])->find($signId);
+        $app = SignApplication::where('status', 1)->find($id);
 
-        if (!$sign) {
-            throw new BusinessException('报名记录不存在', ResponseCode::DATA_NOT_FOUND);
+        if (!$app) {
+            throw new BusinessException('报名申请不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
         return [
-            'signId'       => $sign->sign_id,
-            'userRealName' => $sign->user->real_name ?? '',
-            'userPhone'    => $sign->user->phone ?? '',
-            'userEmail'    => $sign->user->email ?? '',
-            'studentId'    => $sign->user->student_id ?? '',
-            'college'      => $sign->user->college ?? '',
-            'major'        => $sign->user->major ?? '',
-            'courseName'   => $sign->course->course_name ?? '',
-            'signInfo'     => $sign->sign_info,
-            'status'       => $sign->status,
-            'signTime'     => $sign->sign_time,
+            'id'               => $app->id,
+            'name'             => $app->name,
+            'studentId'        => $app->student_id,
+            'department'       => $app->department,
+            'departmentText'   => $app->department == 1 ? '软件开发实验室' : '人工智能实验室',
+            'college'          => $app->college,
+            'major'            => $app->major,
+            'className'        => $app->class_name,
+            'phone'            => $app->phone,
+            'selfIntroduction' => $app->self_introduction,
+            'auditStatus'      => $app->audit_status,
+            'auditRemark'      => $app->audit_remark,
+            'auditAdmin'       => $app->admin->real_name ?? '',
+            'auditTime'        => $app->audit_time,
+            'submitTime'       => $app->submit_time,
         ];
     }
 
     /**
-     * 取消报名
+     * 审核通过
      */
-    public function cancel(int $signId): array
+    public function approve(int $id): array
     {
-        $sign = TrainSign::find($signId);
+        $app = SignApplication::where('status', 1)->find($id);
 
-        if (!$sign) {
-            throw new BusinessException('报名记录不存在', ResponseCode::DATA_NOT_FOUND);
+        if (!$app) {
+            throw new BusinessException('报名申请不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
-        if ($sign->status === 0) {
-            throw new BusinessException('该报名已被取消', ResponseCode::DUPLICATE_SUBMIT);
+        if ($app->audit_status === 1) {
+            throw new BusinessException('该申请已审核通过', ResponseCode::DUPLICATE_SUBMIT);
         }
 
         $adminId = auth('admin_api')->user()->admin_id;
 
-        $sign->status = 0;
-        $sign->save();
+        $app->audit_status = 1;
+        $app->audit_admin  = $adminId;
+        $app->audit_time   = now();
+        $app->save();
 
-        $this->logBusiness('管理员取消报名', [
-            'admin_id' => $adminId,
-            'sign_id'  => $signId,
+        $this->logBusiness('管理员审核通过报名申请', [
+            'admin_id'    => $adminId,
+            'student_id'  => $app->student_id,
+            'application_id' => $id,
         ]);
 
-        return ['signId' => $sign->sign_id, 'status' => 0];
+        return [
+            'id'          => $app->id,
+            'auditStatus' => $app->audit_status,
+            'auditTime'   => $app->audit_time,
+        ];
     }
 
     /**
-     * 导出报名表（返回数据供Controller生成Excel）
+     * 审核驳回
      */
-    public function export(?int $courseId = null): array
+    public function reject(int $id, ?string $remark = null): array
     {
-        $query = TrainSign::with(['user', 'course'])->where('status', 1);
+        $app = SignApplication::where('status', 1)->find($id);
 
-        if ($courseId) {
-            $query->where('course_id', $courseId);
+        if (!$app) {
+            throw new BusinessException('报名申请不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
-        return $query->orderBy('sign_time', 'desc')->get()->map(function (TrainSign $sign) {
-            return [
-                '姓名'     => $sign->user->real_name ?? '',
-                '学号'     => $sign->user->student_id ?? '',
-                '学院'     => $sign->user->college ?? '',
-                '专业'     => $sign->user->major ?? '',
-                '手机号'   => $sign->user->phone ?? '',
-                '邮箱'     => $sign->user->email ?? '',
-                '课程'     => $sign->course->course_name ?? '',
-                '报名信息' => $sign->sign_info ?? '',
-                '报名时间' => $sign->sign_time,
-            ];
-        })->toArray();
+        if ($app->audit_status === 2) {
+            throw new BusinessException('该申请已被驳回', ResponseCode::DUPLICATE_SUBMIT);
+        }
+
+        $adminId = auth('admin_api')->user()->admin_id;
+
+        $app->audit_status = 2;
+        $app->audit_admin  = $adminId;
+        $app->audit_remark = $remark;
+        $app->audit_time   = now();
+        $app->save();
+
+        $this->logBusiness('管理员驳回报名申请', [
+            'admin_id'    => $adminId,
+            'student_id'  => $app->student_id,
+            'application_id' => $id,
+            'remark'      => $remark,
+        ]);
+
+        return [
+            'id'          => $app->id,
+            'auditStatus' => $app->audit_status,
+            'auditRemark' => $app->audit_remark,
+            'auditTime'   => $app->audit_time,
+        ];
     }
 }

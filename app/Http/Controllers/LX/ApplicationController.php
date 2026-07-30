@@ -53,15 +53,12 @@ class ApplicationController extends Controller
     }
 
     /**
-     * 获取已提交的报名详情
-     * GET /api/v1/user/application/detail?student_id=xxx
+     * 获取已提交的报名详情及审核结果（需登录）
+     * GET /api/v1/user/application/detail
      */
-    public function detail(Request $request): JsonResponse
+    public function detail(): JsonResponse
     {
-        $studentId = $request->input('student_id');
-        if (empty($studentId)) {
-            return Result::error(\App\Enums\ResponseCode::PARAM_ERROR, '学号不能为空');
-        }
+        $studentId = auth('user_api')->user()->student_id;
         $result = $this->applicationService->getDetail($studentId);
         return Result::success('获取成功', $result);
     }

@@ -66,7 +66,8 @@ Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
     });
 });
 
-// 3.5 报名申请表 /api/v1/user/application（无需登录）
+// 3.5 报名申请表
+// 公开：草稿保存/获取、提交报名
 Route::prefix('user/application')->group(function () {
     // 草稿
     Route::prefix('draft')->group(function () {
@@ -74,9 +75,13 @@ Route::prefix('user/application')->group(function () {
         Route::get('/',      [ApplicationController::class, 'draft']);//获取草稿
     });
 
-    // 提交与详情
+    // 提交
     Route::post('/submit', [ApplicationController::class, 'submit']);//提交报名
-    Route::get('/detail',  [ApplicationController::class, 'detail']);//获取已提交详情
+});
+
+// 需认证：查看已提交详情及审核结果
+Route::prefix('user/application')->middleware('auth:user_api')->group(function () {
+    Route::get('/detail',  [ApplicationController::class, 'detail']);//获取已提交详情及审核结果
 });
 
 // =======================================================================
@@ -110,10 +115,10 @@ Route::prefix('admin/sign_switch')->middleware('auth:admin_api')->group(function
 
 // 4.5 报名管理 /api/v1/admin/sign — 需鉴权路由
 Route::prefix('admin/sign')->middleware('auth:admin_api')->group(function () {
-    Route::get('/list',             [SignAuditController::class, 'index']);//报名列表
-    Route::get('/detail/{signId}',  [SignAuditController::class, 'detail'])->whereNumber('signId');//报名详情
-    Route::put('/cancel/{signId}',  [SignAuditController::class, 'cancel'])->whereNumber('signId');//取消报名
-    Route::get('/export',           [SignAuditController::class, 'export']);//导出报名表
+    Route::get('/list',                 [SignAuditController::class, 'index']);//报名申请列表
+    Route::get('/detail/{id}',          [SignAuditController::class, 'detail'])->whereNumber('id');//报名申请详情
+    Route::put('/approve/{id}',         [SignAuditController::class, 'approve'])->whereNumber('id');//审核通过
+    Route::put('/reject/{id}',          [SignAuditController::class, 'reject'])->whereNumber('id');//审核驳回
 });
 
 // 4.4 课程管理 — 需鉴权

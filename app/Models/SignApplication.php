@@ -23,5 +23,17 @@ class SignApplication extends Model
         'self_introduction', // 自我介绍
         'status',            // 0草稿 1已提交
         'submit_time',       // 提交时间
+        'audit_status',      // 0待审核 1通过 2驳回
+        'audit_admin',       // 审核管理员ID
+        'audit_remark',      // 审核备注
+        'audit_time',        // 审核时间
     ];
+
+    /**
+     * 关联审核管理员
+     */
+    public function admin()
+    {
+        return $this->belongsTo(SysAdmin::class, 'audit_admin', 'admin_id');
+    }
 }
