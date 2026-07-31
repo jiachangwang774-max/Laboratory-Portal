@@ -5,6 +5,9 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// 增加最大执行时间，避免复杂操作超时
+set_time_limit(300);
+
 /*
 |--------------------------------------------------------------------------
 | Check If The Application Is Under Maintenance
