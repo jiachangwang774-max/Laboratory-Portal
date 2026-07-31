@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\WJC;
 
+use App\Enums\ResponseCode;
+use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WJC\CourseCreateRequest;
 use App\Http\Requests\WJC\CourseUpdateRequest;
@@ -11,6 +13,8 @@ use App\Http\Requests\WJC\UploadCoverRequest;
 use App\Services\WJC\CourseService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
+use OSS\Core\OssException;
+use OSS\Http\RequestCore_Exception;
 use OSS\OssClient;
 
 class CourseController extends Controller
@@ -63,14 +67,23 @@ class CourseController extends Controller
         $ext    = $file->getClientOriginalExtension();
         $object = 'course-covers/' . uniqid() . '.' . $ext;
 
-        $oss = new OssClient(
-            config('filesystems.disks.oss.access_id'),
-            config('filesystems.disks.oss.access_key'),
-            config('filesystems.disks.oss.endpoint'),
-        );
-        $oss->putObject(config('filesystems.disks.oss.bucket'), $object, $file->getContent(), [
-            OssClient::OSS_HEADERS => ['Content-Disposition' => 'inline'],
-        ]);
+        try {
+            $oss = new OssClient(
+                config('filesystems.disks.oss.access_id'),
+                config('filesystems.disks.oss.access_key'),
+                config('filesystems.disks.oss.endpoint'),
+            );
+            $oss->putObject(config('filesystems.disks.oss.bucket'), $object, $file->getContent(), [
+                OssClient::OSS_HEADERS => ['Content-Disposition' => 'inline'],
+            ]);
+        } catch (OssException | RequestCore_Exception $e) {
+            \Illuminate\Support\Facades\Log::channel('exception')->error('OSS上传课程封面失败', [
+                'object'  => $object,
+                'message' => $e->getMessage(),
+                'code'    => $e->getCode(),
+            ]);
+            throw new BusinessException('封面上传失败，请稍后重试', ResponseCode::THIRD_PARTY_ERROR);
+        }
 
         $url = 'https://' . config('filesystems.disks.oss.bucket') . '.'
              . config('filesystems.disks.oss.endpoint') . '/' . $object;

@@ -10,6 +10,8 @@ use App\Models\TrainCourse;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
 use App\Traits\LogTrait;
+use OSS\Core\OssException;
+use OSS\Http\RequestCore_Exception;
 use OSS\OssClient;
 
 class TrainService
@@ -339,12 +341,22 @@ class TrainService
             $ext    = $file->getClientOriginalExtension();
             $object = 'homework/' . uniqid() . '.' . $ext;
 
-            $oss = new OssClient(
-                config('filesystems.disks.oss.access_id'),
-                config('filesystems.disks.oss.access_key'),
-                config('filesystems.disks.oss.endpoint'),
-            );
-            $oss->putObject(config('filesystems.disks.oss.bucket'), $object, $file->getContent());
+            try {
+                $oss = new OssClient(
+                    config('filesystems.disks.oss.access_id'),
+                    config('filesystems.disks.oss.access_key'),
+                    config('filesystems.disks.oss.endpoint'),
+                );
+                $oss->putObject(config('filesystems.disks.oss.bucket'), $object, $file->getContent());
+            } catch (OssException | RequestCore_Exception $e) {
+                \Illuminate\Support\Facades\Log::channel('exception')->error('OSS上传作业文件失败', [
+                    'user_id' => $userId,
+                    'object'  => $object,
+                    'message' => $e->getMessage(),
+                    'code'    => $e->getCode(),
+                ]);
+                throw new BusinessException('作业文件上传失败，请稍后重试', ResponseCode::THIRD_PARTY_ERROR);
+            }
 
             $filePath = 'https://' . config('filesystems.disks.oss.bucket') . '.'
                       . config('filesystems.disks.oss.endpoint') . '/' . $object;

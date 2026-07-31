@@ -12,6 +12,8 @@ use App\Models\VerifyCode;
 use App\Traits\LogTrait;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use OSS\Core\OssException;
+use OSS\Http\RequestCore_Exception;
 use OSS\OssClient;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 
@@ -148,16 +150,26 @@ class AuthService
         $object    = 'avatars/' . uniqid() . '.' . $extension;
 
         // 上传到 OSS
-        $ossClient = new OssClient(
-            config('filesystems.disks.oss.access_id'),
-            config('filesystems.disks.oss.access_key'),
-            config('filesystems.disks.oss.endpoint'),
-        );
-        $ossClient->putObject(
-            config('filesystems.disks.oss.bucket'),
-            $object,
-            $file->getContent(),
-        );
+        try {
+            $ossClient = new OssClient(
+                config('filesystems.disks.oss.access_id'),
+                config('filesystems.disks.oss.access_key'),
+                config('filesystems.disks.oss.endpoint'),
+            );
+            $ossClient->putObject(
+                config('filesystems.disks.oss.bucket'),
+                $object,
+                $file->getContent(),
+            );
+        } catch (OssException | RequestCore_Exception $e) {
+            \Illuminate\Support\Facades\Log::channel('exception')->error('OSS上传头像失败', [
+                'user_id'   => $user->user_id,
+                'object'    => $object,
+                'message'   => $e->getMessage(),
+                'code'      => $e->getCode(),
+            ]);
+            throw new BusinessException('头像上传失败，请稍后重试', ResponseCode::THIRD_PARTY_ERROR);
+        }
 
         // 拼接公开访问 URL
         $url = 'https://' . config('filesystems.disks.oss.bucket') . '.'
