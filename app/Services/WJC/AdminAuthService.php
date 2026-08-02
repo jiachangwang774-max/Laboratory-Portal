@@ -170,7 +170,7 @@ class AdminAuthService
             'adminId'   => $admin->admin_id,
             'adminName' => $admin->admin_name,
             'realName'  => $admin->real_name,
-            'phone'     => PhoneHelper::mask($admin->phone),
+            'phone'     => PhoneHelper::mask($admin->phone ?? ''),
             'email'     => $admin->email,
         ];
     }
