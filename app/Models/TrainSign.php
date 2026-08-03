@@ -16,6 +16,7 @@ class TrainSign extends Model
         'course_id',//课程ID
         'sign_info',//报名信息
         'status',//状态 1正常 0取消
+        'group_name',//分班名称
         'sign_time',//报名时间
     ];
 

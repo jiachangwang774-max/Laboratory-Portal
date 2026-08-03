@@ -21,6 +21,7 @@ class CourseUpdateRequest extends FormRequest
             'startTime'  => 'nullable|date',
             'endTime'    => 'nullable|date',
             'maxSign'    => 'nullable|integer|min:1',
+            'groupCount' => 'nullable|integer|min:1|max:20',
             'status'     => 'nullable|integer|in:0,1',
         ];
     }

@@ -21,6 +21,7 @@ class CourseCreateRequest extends FormRequest
             'startTime'  => 'nullable|date',
             'endTime'    => 'nullable|date',
             'maxSign'    => 'nullable|integer|min:1',
+            'groupCount' => 'nullable|integer|min:1|max:20',
         ];
     }
 

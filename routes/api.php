@@ -131,6 +131,7 @@ Route::prefix('admin/sign')->middleware('auth:admin_api')->group(function () {
     Route::get('/detail/{id}',          [SignAuditController::class, 'detail'])->whereNumber('id');//报名申请详情
     Route::put('/approve/{id}',         [SignAuditController::class, 'approve'])->whereNumber('id');//审核通过
     Route::put('/reject/{id}',          [SignAuditController::class, 'reject'])->whereNumber('id');//审核驳回
+    Route::post('/regroup',             [SignAuditController::class, 'regroup']);//重新分班
 });
 
 // 4.4 课程管理 — 需鉴权
@@ -166,6 +167,7 @@ Route::prefix('admin/homework/submit')->middleware('auth:admin_api')->group(func
     Route::get('/list',               [HomeworkController::class, 'submitList']);//提交列表
     Route::get('/detail/{submitId}',  [HomeworkController::class, 'submitDetail'])->whereNumber('submitId');//详情
     Route::put('/score/{submitId}',   [HomeworkController::class, 'score'])->whereNumber('submitId');//评分
+    Route::delete('/delete', [HomeworkController::class, 'deleteSubmit']);//删除
 });
 
 // 4.7 学员账号管理 — 需鉴权
@@ -174,6 +176,7 @@ Route::prefix('admin/user')->middleware('auth:admin_api')->group(function () {
     Route::get('/detail/{userId}', [UserManageController::class, 'detail'])->whereNumber('userId');//详情
     Route::put('/status/{userId}', [UserManageController::class, 'status'])->whereNumber('userId');//启用禁用
     Route::post('/create',         [UserManageController::class, 'create']);//创建
+    Route::delete('/delete', [UserManageController::class, 'delete']);//删除
 });
 
 // 4.8 学员表现 — 需鉴权
@@ -190,5 +193,6 @@ Route::prefix('admin/checkin')->middleware('auth:admin_api')->group(function () 
     Route::get('/records',   [CheckinController::class, 'records']);//签到明细
     Route::put('/manual',    [CheckinController::class, 'manual']);//手动签到
     Route::get('/export',    [CheckinController::class, 'export']);//导出名单
+    Route::delete('/delete', [CheckinController::class, 'delete']);//删除签到
 });
 

@@ -58,4 +58,14 @@ class SignAuditController extends Controller
         $data = $this->signService->reject($id, $request->validated('remark'));
         return Result::success('已驳回', $data);
     }
+
+    /**
+     * 重新分班
+     * POST /api/v1/admin/sign/regroup
+     */
+    public function regroup(): JsonResponse
+    {
+        $data = $this->signService->regroup();
+        return Result::success('分班完成', $data);
+    }
 }

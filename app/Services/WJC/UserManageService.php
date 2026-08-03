@@ -7,6 +7,7 @@ use App\Exceptions\BusinessException;
 use App\Models\SysUser;
 use App\Models\TrainSign;
 use App\Models\HomeworkSubmit;
+use App\Models\SignApplication;
 use App\Helpers\PhoneHelper;
 use App\Traits\LogTrait;
 use Illuminate\Support\Facades\Hash;
@@ -28,11 +29,13 @@ class UserManageService
 
         $total = $query->count();
         $list = $query->forPage($page, $size)->get()->map(function (SysUser $u) {
+            $app = SignApplication::where('user_id', $u->user_id)->where('audit_status', 1)->first();
             return [
                 'userId'    => $u->user_id,
                 'username'  => $u->username,
                 'realName'  => $u->real_name,
                 'studentId' => $u->student_id,
+                'className' => $app->group_name ?? '',
                 'college'   => $u->college,
                 'major'     => $u->major,
                 'grade'     => $u->grade,
@@ -59,9 +62,11 @@ class UserManageService
             return ['homeworkTitle' => $s->homework->homework_title ?? '', 'courseName' => $s->homework->course->course_name ?? '', 'submitTime' => $s->submit_time, 'score' => $s->score, 'remark' => $s->remark];
         });
 
+        $app = SignApplication::where('user_id', $userId)->where('audit_status', 1)->first();
         return [
             'userId'         => $u->user_id, 'username' => $u->username, 'realName' => $u->real_name,
-            'studentId'      => $u->student_id, 'college' => $u->college, 'major' => $u->major,
+            'studentId'      => $u->student_id, 'className' => $app->group_name ?? '',
+            'college'        => $u->college, 'major' => $u->major,
             'grade'          => $u->grade, 'phone' => $u->phone, 'email' => $u->email,
             'avatar'         => $u->avatar, 'status' => $u->status,
             'signList'       => $signs,
@@ -97,5 +102,13 @@ class UserManageService
 
         $this->logBusiness('管理员创建学员账号', ['user_id' => $u->user_id, 'username' => $u->username]);
         return ['userId' => $u->user_id, 'username' => $u->username, 'realName' => $u->real_name];
+    }
+
+    public function delete(int $userId): void
+    {
+        $u = SysUser::find($userId);
+        if (!$u) throw new BusinessException('学员不存在', ResponseCode::DATA_NOT_FOUND);
+        $u->delete();
+        $this->logBusiness('管理员删除学员', ['user_id' => $userId]);
     }
 }

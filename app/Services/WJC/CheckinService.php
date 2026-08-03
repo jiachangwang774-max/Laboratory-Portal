@@ -122,6 +122,15 @@ class CheckinService
         $c->save();
     }
 
+    public function delete(int $checkinId): void
+    {
+        $c = CourseCheckin::find($checkinId);
+        if (!$c) throw new BusinessException('签到不存在', ResponseCode::DATA_NOT_FOUND);
+        CheckinRecord::where('checkin_id', $checkinId)->delete();
+        $c->delete();
+        $this->logBusiness('管理员删除签到', ['checkin_id' => $checkinId]);
+    }
+
     /**
      * 签到列表
      */

@@ -5,6 +5,7 @@ namespace App\Services\WJC;
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\HomeworkSubmit;
+use App\Models\SignApplication;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
 use App\Traits\LogTrait;
@@ -83,10 +84,13 @@ class HomeworkService
 
         $total = $query->count();
         $list = $query->forPage($page, $size)->get()->map(function (HomeworkSubmit $s) {
+            $app = SignApplication::where('user_id', $s->user_id)->where('audit_status', 1)->first();
             return [
                 'submitId'      => $s->submit_id,
                 'userId'        => $s->user_id,
                 'realName'      => $s->user->real_name ?? '',
+                'studentId'     => $app->student_id ?? '',
+                'className'     => $app->group_name ?? '',
                 'homeworkId'    => $s->homework_id,
                 'homeworkTitle' => $s->homework->homework_title ?? '',
                 'courseName'    => $s->homework->course->course_name ?? '',
@@ -104,10 +108,13 @@ class HomeworkService
         $s = HomeworkSubmit::with(['user', 'homework.course'])->find($submitId);
         if (!$s) throw new BusinessException('提交记录不存在', ResponseCode::DATA_NOT_FOUND);
 
+        $app = SignApplication::where('user_id', $s->user_id)->where('audit_status', 1)->first();
         return [
             'submitId'      => $s->submit_id,
             'userRealName'  => $s->user->real_name ?? '',
             'userPhone'     => $s->user->phone ?? '',
+            'studentId'     => $app->student_id ?? '',
+            'className'     => $app->group_name ?? '',
             'homeworkTitle' => $s->homework->homework_title ?? '',
             'courseName'    => $s->homework->course->course_name ?? '',
             'submitContent' => $s->submit_content,
@@ -116,6 +123,14 @@ class HomeworkService
             'score'         => $s->score,
             'remark'        => $s->remark,
         ];
+    }
+
+    public function deleteSubmit(int $submitId): void
+    {
+        $s = HomeworkSubmit::find($submitId);
+        if (!$s) throw new BusinessException('提交记录不存在', ResponseCode::DATA_NOT_FOUND);
+        $s->delete();
+        $this->logBusiness('管理员删除作业提交', ['submit_id' => $submitId]);
     }
 
     public function score(int $submitId, int $score, ?string $remark): array

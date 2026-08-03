@@ -77,4 +77,10 @@ class CheckinController extends Controller
         $data = $this->service->export((int) $r->input('checkinId'));
         return Result::success('成功', ['list' => $data]);
     }
+
+    public function delete(Request $r): JsonResponse
+    {
+        $this->service->delete((int) $r->input('checkinId'));
+        return Result::success('删除成功');
+    }
 }

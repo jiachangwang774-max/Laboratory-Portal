@@ -9,6 +9,7 @@ use App\Http\Requests\WJC\UserStatusRequest;
 use App\Services\WJC\UserManageService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class UserManageController extends Controller
 {
@@ -36,5 +37,11 @@ class UserManageController extends Controller
     {
         $data = $this->service->create($r->validated());
         return Result::success('学员账号创建成功，默认密码为 Pass@123', $data);
+    }
+
+    public function delete(Request $r): JsonResponse
+    {
+        $this->service->delete((int) $r->input('userId'));
+        return Result::success('删除成功');
     }
 }

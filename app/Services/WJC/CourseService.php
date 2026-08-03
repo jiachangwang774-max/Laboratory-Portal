@@ -33,6 +33,7 @@ class CourseService
             'start_time'   => $data['startTime'] ?? null,
             'end_time'     => $data['endTime'] ?? null,
             'max_sign'     => $data['maxSign'] ?? 100,
+            'group_count'  => $data['groupCount'] ?? 1,
             'status'       => 1,
             'create_admin' => $adminId,
             'create_time'  => now(),
@@ -52,7 +53,7 @@ class CourseService
             $course->cover_img = $this->uploadCover(request()->file('cover'));
         }
 
-        $map = ['courseName' => 'course_name', 'courseDesc' => 'course_desc', 'instructor' => 'instructor', 'courseDate' => 'course_date', 'location' => 'location', 'coverImg' => 'cover_img', 'startTime' => 'start_time', 'endTime' => 'end_time', 'maxSign' => 'max_sign', 'status' => 'status'];
+        $map = ['courseName' => 'course_name', 'courseDesc' => 'course_desc', 'instructor' => 'instructor', 'courseDate' => 'course_date', 'location' => 'location', 'coverImg' => 'cover_img', 'startTime' => 'start_time', 'endTime' => 'end_time', 'maxSign' => 'max_sign', 'groupCount' => 'group_count', 'status' => 'status'];
         foreach ($map as $key => $col) {
             if (array_key_exists($key, $data)) $course->{$col} = $data[$key];
         }
@@ -89,6 +90,7 @@ class CourseService
                 'startTime'   => $c->start_time,
                 'endTime'     => $c->end_time,
                 'maxSign'     => $c->max_sign,
+                'groupCount'  => $c->group_count,
                 'status'      => $c->status,
                 'signCount'   => TrainSign::where('course_id', $c->course_id)->where('status', 1)->count(),
                 'createTime'  => $c->create_time,

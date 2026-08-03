@@ -10,6 +10,7 @@ use App\Http\Requests\WJC\HomeworkScoreRequest;
 use App\Services\WJC\HomeworkService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class HomeworkController extends Controller
 {
@@ -66,5 +67,11 @@ class HomeworkController extends Controller
         return Result::success('评分成功', $this->service->score(
             $submitId, (int) $r->validated('score'), $r->validated('remark')
         ));
+    }
+
+    public function deleteSubmit(Request $r): JsonResponse
+    {
+        $this->service->deleteSubmit((int) $r->input('submitId'));
+        return Result::success('删除成功');
     }
 }
