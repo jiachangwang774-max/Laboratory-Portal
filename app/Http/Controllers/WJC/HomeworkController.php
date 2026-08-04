@@ -52,7 +52,8 @@ class HomeworkController extends Controller
         return Result::success('成功', $this->service->submitList(
             (int) $r->input('page', 1), (int) $r->input('size', 10),
             $r->input('homeworkId') ? (int) $r->input('homeworkId') : null,
-            $r->input('courseId') ? (int) $r->input('courseId') : null
+            $r->input('courseId') ? (int) $r->input('courseId') : null,
+            $r->input('groupName')
         ));
     }
 
