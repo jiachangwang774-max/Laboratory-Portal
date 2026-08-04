@@ -16,7 +16,9 @@ class SignAuditService
      */
     public function list(int $page = 1, int $size = 10, ?int $auditStatus = null): array
     {
+        $dept = auth('admin_api')->user()->department;
         $query = SignApplication::where('status', 1)
+            ->where('department', $dept)
             ->orderBy('submit_time', 'desc');
 
         if ($auditStatus !== null) {

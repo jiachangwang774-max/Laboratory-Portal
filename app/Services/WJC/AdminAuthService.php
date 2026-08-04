@@ -167,11 +167,12 @@ class AdminAuthService
     private function formatAdmin(SysAdmin $admin): array
     {
         return [
-            'adminId'   => $admin->admin_id,
-            'adminName' => $admin->admin_name,
-            'realName'  => $admin->real_name,
-            'phone'     => PhoneHelper::mask($admin->phone ?? ''),
-            'email'     => $admin->email,
+            'adminId'    => $admin->admin_id,
+            'adminName'  => $admin->admin_name,
+            'realName'   => $admin->real_name,
+            'department' => $admin->department,
+            'phone'      => PhoneHelper::mask($admin->phone ?? ''),
+            'email'      => $admin->email,
         ];
     }
 }
