@@ -8,6 +8,7 @@ use App\Http\Requests\WJC\SignListRequest;
 use App\Services\WJC\SignAuditService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class SignAuditController extends Controller
 {
@@ -67,5 +68,29 @@ class SignAuditController extends Controller
     {
         $data = $this->signService->regroup();
         return Result::success('分班完成', $data);
+    }
+
+    /**
+     * 培训名单 - 按班级查看学生
+     * GET /admin/sign/class/list?groupName=一班
+     */
+    public function classList(Request $r): JsonResponse
+    {
+        $groups = [1 => '一班', 2 => '二班', 3 => '三班'];
+        $id = (int) $r->input('groupId', 1);
+        $data = $this->signService->classList($groups[$id] ?? '一班');
+        return Result::success('成功', $data);
+    }
+
+    /**
+     * 培训名单 - 导出
+     * GET /admin/sign/class/export?groupId=1
+     */
+    public function classExport(Request $r): JsonResponse
+    {
+        $groups = [1 => '一班', 2 => '二班', 3 => '三班'];
+        $id = (int) $r->input('groupId', 1);
+        $data = $this->signService->classExport($groups[$id] ?? '一班');
+        return Result::success('成功', ['list' => $data]);
     }
 }

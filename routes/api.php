@@ -132,6 +132,8 @@ Route::prefix('admin/sign')->middleware('auth:admin_api')->group(function () {
     Route::put('/approve/{id}',         [SignAuditController::class, 'approve'])->whereNumber('id');//审核通过
     Route::put('/reject/{id}',          [SignAuditController::class, 'reject'])->whereNumber('id');//审核驳回
     Route::post('/regroup',             [SignAuditController::class, 'regroup']);//重新分班
+    Route::get('/class/list',           [SignAuditController::class, 'classList']);//按班级查看学生
+    Route::get('/class/export',         [SignAuditController::class, 'classExport']);//导出班级学生
 });
 
 // 4.4 课程管理 — 需鉴权

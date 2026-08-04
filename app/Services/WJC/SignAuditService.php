@@ -183,4 +183,52 @@ class SignAuditService
             'auditTime'   => $app->audit_time,
         ];
     }
+
+    /**
+     * 获取指定班级的学生列表
+     */
+    public function classList(string $groupName): array
+    {
+        $dept = auth('admin_api')->user()->department;
+        $list = SignApplication::where('status', 1)
+            ->where('audit_status', 1)
+            ->where('department', $dept)
+            ->where('group_name', $groupName)
+            ->orderBy('student_id')
+            ->get()
+            ->map(function (SignApplication $app) {
+                return [
+                    'id'         => $app->id,
+                    'name'       => $app->name,
+                    'studentId'  => $app->student_id,
+                    'college'    => $app->college,
+                    'major'      => $app->major,
+                    'className'  => $app->class_name,
+                    'phone'      => $app->phone,
+                    'groupName'  => $app->group_name,
+                    'auditTime'  => $app->audit_time,
+                ];
+            });
+
+        return ['groupName' => $groupName, 'count' => $list->count(), 'list' => $list->values()];
+    }
+
+    /**
+     * 导出指定班级的学生信息
+     */
+    public function classExport(string $groupName): array
+    {
+        $data = $this->classList($groupName);
+        return $data['list']->map(function ($r) {
+            return [
+                '姓名'   => $r['name'],
+                '学号'   => $r['studentId'],
+                '学院'   => $r['college'],
+                '专业'   => $r['major'],
+                '班级'   => $r['className'],
+                '分班'   => $r['groupName'],
+                '手机号' => $r['phone'],
+            ];
+        })->toArray();
+    }
 }
