@@ -6,6 +6,7 @@ use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\CourseSession;
 use App\Models\HomeworkSubmit;
+use App\Models\SignApplication;
 use App\Models\TrainCourse;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
@@ -55,6 +56,87 @@ class TrainService
             'signCount'   => $signCount,
             'signStatus'  => $sign ? $sign->status : null,   // null=未报名, 1=已报名, 0=已取消
             'signTime'    => $sign ? $sign->sign_time : null,
+        ];
+    }
+
+    /**
+     * 我的课程详情（学生端）
+     *
+     * 获取当前登录学生通过报名审核后随机分配的课程详情及班级号。
+     * 优先查 train_sign，若无记录则按班级号直接匹配课程并自动补建报名记录。
+     */
+    public function myCourse(int $userId): array
+    {
+        $user = \App\Models\SysUser::find($userId);
+
+        if (!$user) {
+            throw new BusinessException('用户不存在', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        // 查找用户已通过审核的报名申请（获取班级号）
+        $application = SignApplication::where('audit_status', 1)
+            ->where(function ($q) use ($userId, $user) {
+                $q->where('user_id', $userId)
+                  ->orWhere('student_id', $user->student_id);
+            })
+            ->latest('audit_time')
+            ->first();
+
+        if (!$application) {
+            throw new BusinessException('未找到您的报名记录，请先完成报名', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        // 查找用户的课程报名记录
+        $sign = TrainSign::where('user_id', $userId)
+            ->where('status', 1)
+            ->with('course')
+            ->latest('sign_time')
+            ->first();
+
+        // 若无 train_sign 记录，按班级号直接匹配课程并自动补建
+        if (!$sign || !$sign->course) {
+            if (empty($application->group_name)) {
+                throw new BusinessException('您尚未被分配到班级，请联系管理员', ResponseCode::DATA_NOT_FOUND);
+            }
+
+            $course = TrainCourse::enabled()
+                ->where('group_name', $application->group_name)
+                ->latest('create_time')
+                ->first();
+
+            if (!$course) {
+                throw new BusinessException('您所在班级暂无课程，请等待管理员发布', ResponseCode::DATA_NOT_FOUND);
+            }
+
+            // 自动补建 train_sign 记录
+            $sign = TrainSign::firstOrCreate(
+                ['user_id' => $userId, 'course_id' => $course->course_id],
+                ['group_name' => $application->group_name, 'status' => 1, 'sign_time' => now()]
+            );
+        }
+
+        $course = $sign->course ?? TrainCourse::find($sign->course_id);
+
+        // 已报名人数
+        $signCount = TrainSign::where('course_id', $course->course_id)
+            ->where('status', 1)
+            ->count();
+
+        return [
+            'courseId'    => $course->course_id,
+            'courseName'  => $course->course_name,
+            'courseDesc'  => $course->course_desc,
+            'coverImg'    => $course->cover_img,
+            'instructor'  => $course->instructor,
+            'courseDate'  => $course->course_date,
+            'location'    => $course->location,
+            'startTime'   => $course->start_time,
+            'endTime'     => $course->end_time,
+            'maxSign'     => $course->max_sign,
+            'signCount'   => $signCount,
+            'signStatus'  => $sign->status,
+            'signTime'    => $sign->sign_time,
+            'groupName'   => $application->group_name,    // 管理员端随机分配的班级号
         ];
     }
 

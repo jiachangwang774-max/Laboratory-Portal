@@ -30,6 +30,19 @@ class TrainController extends Controller
     }
 
     /**
+     * 获取我的课程详情（学生端）
+     * GET /api/v1/user/train/my-course
+     *
+     * 获取当前登录学生通过报名审核后随机分配的课程详情及班级号
+     */
+    public function myCourse(): JsonResponse
+    {
+        $userId = auth('user_api')->user()->user_id;
+        $data = $this->trainService->myCourse($userId);
+        return Result::success('成功', $data);
+    }
+
+    /**
      * 获取培训详情列表（所有开放的课程安排）
      * GET /api/v1/user/train/training/detail
      */

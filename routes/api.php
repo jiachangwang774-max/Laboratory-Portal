@@ -55,6 +55,7 @@ Route::prefix('user/auth')->middleware('auth:user_api')->group(function () {
 Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
     Route::prefix('course')->group(function () {
         Route::get('/detail/{course_id}', [TrainController::class, 'courseDetail'])->whereNumber('course_id');//获取课程详情
+        Route::get('/my-course',          [TrainController::class, 'myCourse']);//获取我的课程详情（含随机分班班级号）
     });
 
     Route::prefix('training')->group(function () {

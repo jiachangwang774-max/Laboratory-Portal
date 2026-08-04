@@ -5,6 +5,8 @@ namespace App\Services\WJC;
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\SignApplication;
+use App\Models\TrainCourse;
+use App\Models\TrainSign;
 use App\Traits\LogTrait;
 
 class SignAuditService
@@ -101,6 +103,11 @@ class SignAuditService
         $app->group_name   = $this->assignGroup();
         $app->save();
 
+        // 审核通过后，为该学生创建课程报名记录（随机分班）
+        if ($app->user_id) {
+            $this->syncTrainSign($app);
+        }
+
         $this->logBusiness('管理员审核通过报名申请', [
             'admin_id'    => $adminId,
             'student_id'  => $app->student_id,
@@ -126,6 +133,41 @@ class SignAuditService
             ->value('group_name');
         $idx = $last ? (array_search($last, $groups) + 1) % 3 : 0;
         return $groups[$idx];
+    }
+
+    /**
+     * 同步创建 train_sign 报名记录
+     *
+     * 找到与学生分配班级匹配的活跃课程（由该班级的管理员发布），创建课程报名记录
+     */
+    private function syncTrainSign(SignApplication $app): void
+    {
+        if (empty($app->group_name)) {
+            return;
+        }
+
+        // 查找与分班名称匹配的活跃课程（管理员发布课程时指定了班级）
+        $courses = TrainCourse::enabled()
+            ->where('group_name', $app->group_name)
+            ->latest('create_time')
+            ->get();
+
+        foreach ($courses as $course) {
+            // 避免重复创建
+            $exists = TrainSign::where('user_id', $app->user_id)
+                ->where('course_id', $course->course_id)
+                ->exists();
+
+            if (!$exists) {
+                TrainSign::create([
+                    'user_id'    => $app->user_id,
+                    'course_id'  => $course->course_id,
+                    'group_name' => $app->group_name,
+                    'status'     => 1,
+                    'sign_time'  => now(),
+                ]);
+            }
+        }
     }
 
     /**

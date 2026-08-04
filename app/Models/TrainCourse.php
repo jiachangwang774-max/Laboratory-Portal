@@ -22,6 +22,7 @@ class TrainCourse extends Model
         'end_time',//结束时间
         'max_sign',//最大报名人数
         'group_count',//分班数量
+        'group_name',//指定班级
         'status',//状态
         'create_admin',//创建人ID
         'create_time',//创建时间
@@ -33,5 +34,13 @@ class TrainCourse extends Model
     public function scopeEnabled($query)
     {
         return $query->where('status', 1);
+    }
+
+    /**
+     * 关联创建管理员
+     */
+    public function admin()
+    {
+        return $this->belongsTo(SysAdmin::class, 'create_admin', 'admin_id');
     }
 }
