@@ -22,7 +22,7 @@ class HomeworkController extends Controller
         return Result::success('作业布置成功', $this->service->create(
             $adminId, (int) $r->validated('courseId'),
             $r->validated('homeworkTitle'), $r->validated('homeworkContent'),
-            $r->validated('deadline')
+            $r->validated('deadline'), $r->validated('groupName')
         ));
     }
 

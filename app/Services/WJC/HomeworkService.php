@@ -14,13 +14,14 @@ class HomeworkService
 {
     use LogTrait;
 
-    public function create(int $adminId, int $courseId, string $title, ?string $content, ?string $deadline): array
+    public function create(int $adminId, int $courseId, string $title, ?string $content, ?string $deadline, ?string $groupName = null): array
     {
         $hw = TrainHomework::create([
             'course_id'        => $courseId,
             'homework_title'   => $title,
             'homework_content' => $content,
             'deadline'         => $deadline,
+            'group_name'       => $groupName,
             'create_admin'     => $adminId,
             'create_time'      => now(),
         ]);
@@ -36,6 +37,7 @@ class HomeworkService
         if (isset($data['homeworkTitle'])) $hw->homework_title = $data['homeworkTitle'];
         if (isset($data['homeworkContent'])) $hw->homework_content = $data['homeworkContent'];
         if (isset($data['deadline'])) $hw->deadline = $data['deadline'];
+        if (array_key_exists('groupName', $data)) $hw->group_name = $data['groupName'];
         $hw->save();
 
         $this->logBusiness('管理员编辑作业', ['homework_id' => $homeworkId]);
@@ -62,6 +64,7 @@ class HomeworkService
                 'courseId'        => $hw->course_id,
                 'courseName'      => $hw->course->course_name ?? '',
                 'homeworkTitle'   => $hw->homework_title,
+                'groupName'       => $hw->group_name,
                 'deadline'        => $hw->deadline,
                 'submitCount'     => HomeworkSubmit::where('homework_id', $hw->homework_id)->count(),
                 'createTime'      => $hw->create_time,

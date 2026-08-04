@@ -15,6 +15,7 @@ class HomeworkCreateRequest extends FormRequest
             'homeworkTitle'   => 'required|string|max:100',
             'homeworkContent' => 'nullable|string',
             'deadline'        => 'nullable|date',
+            'groupName'       => 'nullable|string|in:一班,二班,三班',
         ];
     }
 
