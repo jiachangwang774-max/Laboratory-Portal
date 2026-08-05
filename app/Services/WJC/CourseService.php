@@ -23,6 +23,7 @@ class CourseService
             $coverImg = $this->uploadCover(request()->file('cover'));
         }
 
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
         $course = TrainCourse::create([
             'course_name'  => $data['courseName'],
             'course_desc'  => $data['courseDesc'] ?? '',
@@ -34,6 +35,7 @@ class CourseService
             'end_time'     => $data['endTime'] ?? null,
             'max_sign'     => $data['maxSign'] ?? 100,
             'group_count'  => $data['groupCount'] ?? 1,
+            'lab_id'       => $labId,
             'status'       => 1,
             'create_admin' => $adminId,
             'create_time'  => now(),
@@ -73,7 +75,8 @@ class CourseService
 
     public function list(int $page = 1, int $size = 10, ?string $courseName = null, ?int $status = null): array
     {
-        $query = TrainCourse::orderBy('create_time', 'desc');
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        $query = TrainCourse::where('lab_id', $labId)->orderBy('create_time', 'desc');
         if ($courseName) $query->where('course_name', 'like', "%{$courseName}%");
         if ($status !== null) $query->where('status', $status);
 

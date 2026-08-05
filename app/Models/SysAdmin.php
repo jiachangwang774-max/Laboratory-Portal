@@ -20,6 +20,7 @@ class SysAdmin extends Authenticatable implements JWTSubject
         'phone',//手机号
         'email',//邮箱
         'department',//部门 1软件开发 2人工智能
+        'lab_id',//实验室 software/ai
         'status',//状态
     ];
 

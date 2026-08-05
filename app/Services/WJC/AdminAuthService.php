@@ -166,13 +166,24 @@ class AdminAuthService
 
     private function formatAdmin(SysAdmin $admin): array
     {
+        $labId = $admin->lab_id ?: 'software';
         return [
-            'adminId'    => $admin->admin_id,
-            'adminName'  => $admin->admin_name,
-            'realName'   => $admin->real_name,
-            'department' => $admin->department,
-            'phone'      => PhoneHelper::mask($admin->phone ?? ''),
-            'email'      => $admin->email,
+            'adminId'     => $admin->admin_id,
+            'adminName'   => $admin->admin_name,
+            'realName'    => $admin->real_name,
+            'labId'       => $labId,
+            'labName'     => $labId === 'ai' ? '人工智能实验室' : '软件开发实验室',
+            'roles'       => ['admin'],
+            'permissions' => [
+                'user:list', 'user:create', 'user:delete', 'user:update',
+                'course:list', 'course:create', 'course:edit', 'course:delete',
+                'checkin:create', 'checkin:list', 'checkin:end',
+                'homework:create', 'homework:list',
+                'score:list',
+                'application:list', 'application:approve',
+            ],
+            'phone'       => PhoneHelper::mask($admin->phone ?? ''),
+            'email'       => $admin->email,
         ];
     }
 }

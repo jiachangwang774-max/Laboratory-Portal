@@ -16,12 +16,14 @@ class HomeworkService
 
     public function create(int $adminId, int $courseId, string $title, ?string $content, ?string $deadline, ?string $groupName = null): array
     {
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
         $hw = TrainHomework::create([
             'course_id'        => $courseId,
             'homework_title'   => $title,
             'homework_content' => $content,
             'deadline'         => $deadline,
             'group_name'       => $groupName,
+            'lab_id'           => $labId,
             'create_admin'     => $adminId,
             'create_time'      => now(),
         ]);
@@ -54,7 +56,8 @@ class HomeworkService
 
     public function list(int $page = 1, int $size = 10, ?int $courseId = null): array
     {
-        $query = TrainHomework::with('course')->orderBy('create_time', 'desc');
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        $query = TrainHomework::with('course')->where('lab_id', $labId)->orderBy('create_time', 'desc');
         if ($courseId) $query->where('course_id', $courseId);
 
         $total = $query->count();

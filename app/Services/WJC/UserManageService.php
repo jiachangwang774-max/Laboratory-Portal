@@ -93,6 +93,7 @@ class UserManageService
             if (\App\Models\SysAdmin::where('admin_name', $data['username'])->exists()) {
                 throw new BusinessException('管理员账号已存在', ResponseCode::DATA_DUPLICATE);
             }
+            $labId = auth('admin_api')->user()->lab_id ?? 'software';
             $u = \App\Models\SysAdmin::create([
                 'admin_name' => $data['username'],
                 'password'   => Hash::make('Pass@123'),
@@ -100,6 +101,7 @@ class UserManageService
                 'phone'      => $data['phone'] ?? null,
                 'email'      => $data['email'] ?? null,
                 'department' => 1,
+                'lab_id'     => $labId,
                 'status'     => 1,
             ]);
             $this->logBusiness('管理员创建管理员账号', ['admin_id' => $u->admin_id, 'admin_name' => $u->admin_name]);

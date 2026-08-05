@@ -18,16 +18,18 @@ class CheckinService
      */
     public function create(int $adminId, int $courseId, ?int $sessionId, int $duration = 5): array
     {
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+
         // 检查是否有进行中的签到，有则先结束
-        CourseCheckin::where('course_id', $courseId)->where('status', 1)->update(['status' => 0, 'end_time' => now()]);
+        CourseCheckin::where('lab_id', $labId)->where('course_id', $courseId)->where('status', 1)->update(['status' => 0, 'end_time' => now()]);
 
         $code = (string) random_int(100000, 999999);
-
         $c = CourseCheckin::create([
             'course_id'    => $courseId,
             'session_id'   => $sessionId,
             'checkin_code' => $code,
             'status'       => 1,
+            'lab_id'       => $labId,
             'create_admin' => $adminId,
             'create_time'  => now(),
             'end_time'     => now()->addMinutes($duration),
@@ -136,7 +138,8 @@ class CheckinService
      */
     public function list(int $page = 1, int $size = 10, ?int $courseId = null, ?int $sessionId = null): array
     {
-        $query = CourseCheckin::with('course')->orderBy('create_time', 'desc');
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        $query = CourseCheckin::with('course')->where('lab_id', $labId)->orderBy('create_time', 'desc');
         if ($courseId) $query->where('course_id', $courseId);
         if ($sessionId) $query->where('session_id', $sessionId);
 
