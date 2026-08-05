@@ -11,7 +11,7 @@ class CheckinRecord extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'checkin_id', 'user_id', 'checkin_method', 'checkin_time',
+        'checkin_id', 'user_id', 'checkin_method', 'checkin_time', 'lab_id',
     ];
 
     public function user()

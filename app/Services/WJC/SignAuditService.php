@@ -18,9 +18,9 @@ class SignAuditService
      */
     public function list(int $page = 1, int $size = 10, ?int $auditStatus = null): array
     {
-        $dept = auth('admin_api')->user()->department;
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
         $query = SignApplication::where('status', 1)
-            ->where('department', $dept)
+            ->where('lab_id', $labId)
             ->orderBy('submit_time', 'desc');
 
         if ($auditStatus !== null) {
@@ -231,10 +231,10 @@ class SignAuditService
      */
     public function classList(string $groupName): array
     {
-        $dept = auth('admin_api')->user()->department;
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
         $list = SignApplication::where('status', 1)
             ->where('audit_status', 1)
-            ->where('department', $dept)
+            ->where('lab_id', $labId)
             ->where('group_name', $groupName)
             ->orderBy('student_id')
             ->get()
