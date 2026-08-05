@@ -36,7 +36,9 @@ class UserManageController extends Controller
     public function create(UserCreateRequest $r): JsonResponse
     {
         $data = $this->service->create($r->validated());
-        return Result::success('学员账号创建成功，默认密码为 Pass@123', $data);
+        $role = $r->input('role', 'student');
+        $msg = $role === 'admin' ? '管理员账号创建成功' : '学员账号创建成功';
+        return Result::success($msg.'，默认密码为 Pass@123', $data);
     }
 
     public function delete(Request $r): JsonResponse

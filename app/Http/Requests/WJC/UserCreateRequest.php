@@ -11,7 +11,7 @@ class UserCreateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username'  => 'required|string|max:50|unique:sys_user,username',
+            'username'  => 'required|string|max:50',
             'realName'  => 'required|string|max:20',
             'phone'     => 'nullable|string|max:11',
             'email'     => 'nullable|email|max:50',
@@ -19,6 +19,7 @@ class UserCreateRequest extends FormRequest
             'major'     => 'nullable|string|max:50',
             'college'   => 'nullable|string|max:50',
             'studentId' => 'nullable|string|max:20',
+            'role'      => 'nullable|string|in:student,admin',
         ];
     }
 

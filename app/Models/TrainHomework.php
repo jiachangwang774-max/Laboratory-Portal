@@ -17,6 +17,7 @@ class TrainHomework extends Model
         'homework_content',//作业内容
         'deadline',//截止时间
         'group_name',//指定班级
+        'lab_id',//实验室
         'create_time',//创建时间
     ];
 
