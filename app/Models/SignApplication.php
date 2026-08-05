@@ -28,6 +28,7 @@ class SignApplication extends Model
         'audit_admin',       // 审核管理员ID
         'audit_remark',      // 审核备注
         'audit_time',        // 审核时间
+        'lab_id',            // 实验室
     ];
 
     /**
