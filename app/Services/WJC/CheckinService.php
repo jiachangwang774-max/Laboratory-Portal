@@ -6,7 +6,7 @@ use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\CheckinRecord;
 use App\Models\CourseCheckin;
-use App\Models\TrainSign;
+use App\Models\SignApplication;
 use App\Traits\LogTrait;
 
 class CheckinService
@@ -169,19 +169,22 @@ class CheckinService
         $c = CourseCheckin::with('course')->find($checkinId);
         if (!$c) throw new BusinessException('签到不存在', ResponseCode::DATA_NOT_FOUND);
 
+        $dept = auth('admin_api')->user()->department;
         $signedIds = CheckinRecord::where('checkin_id', $checkinId)->pluck('user_id');
 
-        $signUsers = TrainSign::where('course_id', $c->course_id)->where('status', 1)
-            ->with('user')->get()->map(function ($s) use ($signedIds) {
-                $user = $s->user;
-                $isSigned = $signedIds->contains($user->user_id);
-                $record = $isSigned ? CheckinRecord::where('checkin_id', $s->checkin_id ?? 0)->where('user_id', $user->user_id)->first() : null;
+        $apps = \App\Models\SignApplication::where('audit_status', 1)
+            ->where('department', $dept)
+            ->orderBy('group_name')->orderBy('student_id')
+            ->get()->map(function ($app) use ($signedIds) {
+                $isSigned = $app->user_id && $signedIds->contains($app->user_id);
+                $record = $isSigned ? CheckinRecord::where('checkin_id', $app->checkin_id ?? 0)->where('user_id', $app->user_id)->first() : null;
                 return [
-                    'userId'     => $user->user_id,
-                    'realName'   => $user->real_name,
-                    'studentId'  => $user->student_id,
-                    'college'    => $user->college,
-                    'major'      => $user->major,
+                    'userId'     => $app->user_id,
+                    'realName'   => $app->name,
+                    'studentId'  => $app->student_id,
+                    'college'    => $app->college,
+                    'major'      => $app->major,
+                    'className'  => $app->group_name,
                     'isSigned'   => $isSigned,
                     'method'     => $record->checkin_method ?? null,
                     'checkinTime'=> $record->checkin_time ?? null,
@@ -193,9 +196,9 @@ class CheckinService
             'courseName'  => $c->course->course_name ?? '',
             'checkinCode' => $c->checkin_code,
             'status'      => $c->status,
-            'total'       => $signUsers->count(),
+            'total'       => $apps->count(),
             'signed'      => $signedIds->count(),
-            'list'        => $signUsers->values(),
+            'list'        => $apps->values(),
         ];
     }
 
@@ -209,6 +212,7 @@ class CheckinService
             return [
                 '姓名'   => $r['realName'],
                 '学号'   => $r['studentId'],
+                '班级'   => $r['className'] ?? '',
                 '学院'   => $r['college'],
                 '专业'   => $r['major'],
                 '签到状态' => $r['isSigned'] ? '已签到' : '未签到',
