@@ -87,6 +87,22 @@ class UserManageService
 
     public function create(array $data): array
     {
+        $isAdmin = ($data['role'] ?? 'student') === 'admin';
+
+        if ($isAdmin) {
+            $u = \App\Models\SysAdmin::create([
+                'admin_name' => $data['username'],
+                'password'   => Hash::make('Pass@123'),
+                'real_name'  => $data['realName'],
+                'phone'      => $data['phone'] ?? null,
+                'email'      => $data['email'] ?? null,
+                'department' => 1,
+                'status'     => 1,
+            ]);
+            $this->logBusiness('管理员创建管理员账号', ['admin_id' => $u->admin_id, 'admin_name' => $u->admin_name]);
+            return ['userId' => null, 'adminId' => $u->admin_id, 'username' => $u->admin_name, 'realName' => $u->real_name, 'role' => 'admin'];
+        }
+
         $u = SysUser::create([
             'username'   => $data['username'],
             'password'   => Hash::make('Pass@123'),
@@ -101,7 +117,7 @@ class UserManageService
         ]);
 
         $this->logBusiness('管理员创建学员账号', ['user_id' => $u->user_id, 'username' => $u->username]);
-        return ['userId' => $u->user_id, 'username' => $u->username, 'realName' => $u->real_name];
+        return ['userId' => $u->user_id, 'username' => $u->username, 'realName' => $u->real_name, 'role' => 'student'];
     }
 
     public function delete(int $userId): void

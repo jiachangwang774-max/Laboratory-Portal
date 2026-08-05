@@ -19,6 +19,7 @@ class UserCreateRequest extends FormRequest
             'major'     => 'nullable|string|max:50',
             'college'   => 'nullable|string|max:50',
             'studentId' => 'nullable|string|max:20',
+            'role'      => 'nullable|string|in:student,admin',
         ];
     }
 
