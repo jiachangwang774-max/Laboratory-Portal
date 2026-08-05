@@ -18,7 +18,8 @@ class UserManageService
 
     public function list(int $page = 1, int $size = 10, ?string $keyword = null, ?int $status = null): array
     {
-        $query = SysUser::orderBy('create_time', 'desc');
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        $query = SysUser::where('lab_id', $labId)->orderBy('create_time', 'desc');
         if ($keyword) {
             $query->where(function ($q) use ($keyword) {
                 $q->where('real_name', 'like', "%{$keyword}%")
@@ -111,6 +112,7 @@ class UserManageService
         if (SysUser::where('username', $data['username'])->exists()) {
             throw new BusinessException('学员账号已存在', ResponseCode::DATA_DUPLICATE);
         }
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
         $u = SysUser::create([
             'username'   => $data['username'],
             'password'   => Hash::make('Pass@123'),
@@ -121,6 +123,7 @@ class UserManageService
             'major'      => $data['major'] ?? null,
             'college'    => $data['college'] ?? null,
             'student_id' => $data['studentId'] ?? null,
+            'lab_id'     => $labId,
             'status'     => 1,
         ]);
 
