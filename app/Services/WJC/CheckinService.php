@@ -135,6 +135,7 @@ class CheckinService
     {
         $c = CourseCheckin::find($checkinId);
         if (!$c) throw new BusinessException('签到不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($c->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $c->status = 0;
         $c->end_time = now();
         $c->save();
@@ -144,6 +145,7 @@ class CheckinService
     {
         $c = CourseCheckin::find($checkinId);
         if (!$c) throw new BusinessException('签到不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($c->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         CheckinRecord::where('checkin_id', $checkinId)->delete();
         $c->delete();
         $this->logBusiness('管理员删除签到', ['checkin_id' => $checkinId]);
@@ -187,6 +189,7 @@ class CheckinService
     {
         $c = CourseCheckin::with('course')->find($checkinId);
         if (!$c) throw new BusinessException('签到不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($c->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
         $dept = auth('admin_api')->user()->department;
         $signedIds = CheckinRecord::where('checkin_id', $checkinId)->pluck('user_id');

@@ -35,6 +35,7 @@ class HomeworkService
     {
         $hw = TrainHomework::find($homeworkId);
         if (!$hw) throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($hw->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
         if (isset($data['homeworkTitle'])) $hw->homework_title = $data['homeworkTitle'];
         if (isset($data['homeworkContent'])) $hw->homework_content = $data['homeworkContent'];
@@ -50,6 +51,7 @@ class HomeworkService
     {
         $hw = TrainHomework::find($homeworkId);
         if (!$hw) throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($hw->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $hw->delete();
         $this->logBusiness('管理员删除作业', ['homework_id' => $homeworkId]);
     }
@@ -140,6 +142,7 @@ class HomeworkService
     {
         $s = HomeworkSubmit::find($submitId);
         if (!$s) throw new BusinessException('提交记录不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($s->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $s->delete();
         $this->logBusiness('管理员删除作业提交', ['submit_id' => $submitId]);
     }
@@ -148,6 +151,7 @@ class HomeworkService
     {
         $s = HomeworkSubmit::find($submitId);
         if (!$s) throw new BusinessException('提交记录不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($s->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
         $s->score = $score;
         $s->remark = $remark;

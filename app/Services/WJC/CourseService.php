@@ -50,6 +50,7 @@ class CourseService
     {
         $course = TrainCourse::find($courseId);
         if (!$course) throw new BusinessException('课程不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($course->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
         if (request()->hasFile('cover')) {
             $course->cover_img = $this->uploadCover(request()->file('cover'));
@@ -69,6 +70,7 @@ class CourseService
     {
         $course = TrainCourse::find($courseId);
         if (!$course) throw new BusinessException('课程不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($course->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $course->delete();
         $this->logBusiness('管理员删除课程', ['course_id' => $courseId]);
     }
@@ -131,6 +133,7 @@ class CourseService
     {
         $course = TrainCourse::find($courseId);
         if (!$course) throw new BusinessException('课程不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($course->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $course->status = $status;
         $course->save();
         $this->logBusiness($status ? '课程上架' : '课程下架', ['course_id' => $courseId]);

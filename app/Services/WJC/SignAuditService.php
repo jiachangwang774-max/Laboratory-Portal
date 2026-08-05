@@ -100,7 +100,6 @@ class SignAuditService
         $app->audit_status = 1;
         $app->audit_admin  = $adminId;
         $app->audit_time   = now();
-        $app->group_name   = $this->assignGroup();
         $app->save();
 
         // 审核通过后，为该学生创建课程报名记录（随机分班）
@@ -261,8 +260,9 @@ class SignAuditService
     public function classExport(string $groupName): array
     {
         $data = $this->classList($groupName);
-        return $data['list']->map(function ($r) {
+        return $data['list']->map(function ($r, $i) {
             return [
+                '序号'   => $i + 1,
                 '姓名'   => $r['name'],
                 '学号'   => $r['studentId'],
                 '学院'   => $r['college'],
@@ -272,5 +272,86 @@ class SignAuditService
                 '手机号' => $r['phone'],
             ];
         })->toArray();
+    }
+
+    /**
+     * 导入分班Excel：按学号匹配更新group_name
+     */
+    public function importClass($filePath): array
+    {
+        $zip = new \ZipArchive();
+        $zip->open($filePath);
+        $xml = $zip->getFromName('xl/sharedStrings.xml');
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+
+        // 解析共享字符串
+        $strings = [];
+        if ($xml) {
+            $sx = simplexml_load_string($xml);
+            foreach ($sx->si as $si) {
+                $t = '';
+                foreach ($si->t ?? [] as $part) $t .= (string) $part;
+                if ($t === '') $t = (string) ($si->t ?? '');
+                $strings[] = $t;
+            }
+        }
+
+        // 解析sheet
+        $sx = simplexml_load_string($sheet);
+        $nsPrefix = '';
+        foreach ($sx->getNamespaces(true) as $p => $u) {
+            if (str_contains($u, 'spreadsheetml')) { $nsPrefix = $p ? "$p:" : ''; break; }
+        }
+        if (!$nsPrefix) $nsPrefix = '';
+
+        $rows = [];
+        foreach ($sx->sheetData->row as $row) {
+            $cells = [];
+            foreach ($row->c as $c) {
+                $r = (string) $c['r'];
+                $col = preg_replace('/\d/', '', $r);
+                $val = (string) ($c->v ?? '');
+                if ((string) ($c['t'] ?? '') === 's' && isset($strings[(int) $val])) {
+                    $val = $strings[(int) $val];
+                }
+                $cells[$col] = trim($val);
+            }
+            if (!empty($cells)) $rows[] = $cells;
+        }
+
+        // 跳过表头（第一行）
+        $dataRows = count($rows) > 1 ? array_slice($rows, 1) : [];
+
+        $success = 0; $fail = 0;
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        $validGroups = ['一班', '二班', '三班'];
+
+        foreach ($dataRows as $r) {
+            $studentId = $r['C'] ?? $r['B'] ?? '';  // C=学号
+            $groupName = $r['G'] ?? $r['F'] ?? '';  // G=分班
+
+            if (empty($studentId) || empty($groupName)) { $fail++; continue; }
+            if (!in_array($groupName, $validGroups)) { $fail++; continue; }
+
+            $app = SignApplication::where('lab_id', $labId)
+                ->where('audit_status', 1)
+                ->where('student_id', $studentId)
+                ->first();
+
+            if ($app) {
+                $app->group_name = $groupName;
+                $app->save();
+                $success++;
+            } else {
+                $name = $r['A'] ?? '';
+                $app = SignApplication::where('lab_id', $labId)->where('audit_status', 1)->where('name', $name)->first();
+                if ($app) { $app->group_name = $groupName; $app->save(); $success++; }
+                else { $fail++; }
+            }
+        }
+
+        $this->logBusiness('管理员导入分班', ['success' => $success, 'fail' => $fail]);
+        return ['successCount' => $success, 'failCount' => $fail];
     }
 }

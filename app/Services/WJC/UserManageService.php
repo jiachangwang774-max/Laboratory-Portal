@@ -54,6 +54,7 @@ class UserManageService
     {
         $u = SysUser::find($userId);
         if (!$u) throw new BusinessException('学员不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($u->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
         $signs = TrainSign::with('course')->where('user_id', $userId)->orderBy('sign_time', 'desc')->get()->map(function ($s) {
             return ['signId' => $s->sign_id, 'courseName' => $s->course->course_name ?? '', 'status' => $s->status, 'signTime' => $s->sign_time];
@@ -80,6 +81,7 @@ class UserManageService
     {
         $u = SysUser::find($userId);
         if (!$u) throw new BusinessException('学员不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($u->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $u->status = $status;
         $u->save();
         $this->logBusiness('管理员修改学员状态', ['user_id' => $userId, 'status' => $status]);
@@ -135,6 +137,7 @@ class UserManageService
     {
         $u = SysUser::find($userId);
         if (!$u) throw new BusinessException('学员不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($u->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $u->delete();
         $this->logBusiness('管理员删除学员', ['user_id' => $userId]);
     }
