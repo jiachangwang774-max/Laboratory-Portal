@@ -1,5 +1,5 @@
 <?php
-
+// 作业提交表
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('submit_file', 500)->nullable()->comment('附件文件地址');
             $table->dateTime('submit_time')->useCurrent()->comment('提交时间');
             $table->integer('score')->nullable()->comment('批阅分数');
+            $table->string('remark', 200)->nullable()->comment('教师评语');
             $table->unique(['user_id', 'homework_id'], 'uk_user_homework');
         });
     }

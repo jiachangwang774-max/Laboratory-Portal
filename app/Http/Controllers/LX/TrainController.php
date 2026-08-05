@@ -43,22 +43,24 @@ class TrainController extends Controller
     }
 
     /**
-     * 获取培训详情列表（所有开放的课程安排）
+     * 获取培训详情列表（学生所在班级的课程安排）
      * GET /api/v1/user/train/training/detail
      */
     public function trainingDetail(): JsonResponse
     {
-        $data = $this->trainService->trainingDetail();
+        $userId = auth('user_api')->user()->user_id;
+        $data = $this->trainService->trainingDetail($userId);
         return Result::success('成功', $data);
     }
 
     /**
-     * 获取单个培训详情
+     * 获取单个培训详情（学生所在班级）
      * GET /api/v1/user/train/training/detail/{session_id}
      */
     public function trainingSessionDetail(int $session_id): JsonResponse
     {
-        $data = $this->trainService->trainingSessionDetail($session_id);
+        $userId = auth('user_api')->user()->user_id;
+        $data = $this->trainService->trainingSessionDetail($session_id, $userId);
         return Result::success('成功', $data);
     }
 
@@ -148,7 +150,7 @@ class TrainController extends Controller
         $code   = $request->input('code');
 
         if (!$code || strlen($code) !== 6 || !ctype_digit($code)) {
-            return Result::error('请输入有效的6位签到码', \App\Enums\ResponseCode::PARAM_ERROR);
+            return Result::error(\App\Enums\ResponseCode::PARAM_ERROR, '请输入有效的6位签到码');
         }
 
         $data = $this->checkinService->studentCheckinByCode($userId, $code);

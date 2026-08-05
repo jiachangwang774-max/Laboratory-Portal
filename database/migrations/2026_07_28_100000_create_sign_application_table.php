@@ -1,5 +1,5 @@
 <?php
-
+// 报名申请表
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,6 +20,11 @@ return new class extends Migration
             $table->string('phone', 20)->nullable()->comment('手机号');
             $table->text('self_introduction')->nullable()->comment('自我介绍');
             $table->tinyInteger('status')->default(0)->comment('0草稿 1已提交');
+            $table->tinyInteger('audit_status')->default(0)->comment('0待审核 1通过 2驳回');
+            $table->string('group_name', 20)->nullable()->comment('分班');
+            $table->unsignedBigInteger('audit_admin')->nullable()->comment('审核管理员ID');
+            $table->string('audit_remark', 200)->nullable()->comment('审核备注');
+            $table->dateTime('audit_time')->nullable()->comment('审核时间');
             $table->dateTime('submit_time')->nullable()->comment('提交时间');
             $table->dateTime('create_time')->useCurrent()->comment('创建时间');
             $table->dateTime('update_time')->useCurrent()->useCurrentOnUpdate()->comment('更新时间');

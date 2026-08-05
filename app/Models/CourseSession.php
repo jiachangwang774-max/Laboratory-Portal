@@ -20,4 +20,12 @@ class CourseSession extends Model
     {
         return $this->belongsTo(TrainCourse::class, 'course_id', 'course_id');
     }
+
+    /**
+     * 只查询正常展示的课程安排
+     */
+    public function scopeEnabled($query)
+    {
+        return $query->where('status', 1);
+    }
 }
