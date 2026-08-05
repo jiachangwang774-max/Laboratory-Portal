@@ -10,7 +10,6 @@ use App\Models\TrainCourse;
 use App\Models\TrainSign;
 use App\Models\TrainHomework;
 use App\Models\HomeworkSubmit;
-use App\Models\Notice;
 use App\Models\SystemConfig;
 
 class WJCAdminSeeder extends Seeder
@@ -197,43 +196,6 @@ class WJCAdminSeeder extends Seeder
                 'submit_content' => '已完成LED点亮，代码见附件',
                 'submit_file'    => 'homework_files/led_code.zip',
                 'submit_time'    => '2026-08-03 15:00:00',
-            ]
-        );
-
-        // ===== 新闻公告 =====
-        Notice::firstOrCreate(
-            ['title' => '实验室暑期培训安排通知'],
-            [
-                'content'      => "各位同学：\n\n2026年暑期培训将于8月1日正式开始，请已报名的同学准时参加。\n\n课程安排详见课表。",
-                'cover'        => 'https://img.example.com/notice_summer.jpg',
-                'is_top'       => 1,
-                'status'       => 1,
-                'create_admin' => $admin1->admin_id,
-                'create_time'  => now(),
-            ]
-        );
-
-        Notice::firstOrCreate(
-            ['title' => '期末考试安排'],
-            [
-                'content'      => '本学期期末考试定于7月15日-7月20日进行，请同学们提前复习。',
-                'cover'        => '',
-                'is_top'       => 0,
-                'status'       => 1,
-                'create_admin' => $admin1->admin_id,
-                'create_time'  => now()->subDays(10),
-            ]
-        );
-
-        Notice::firstOrCreate(
-            ['title' => '实验室搬迁通知（已下架）'],
-            [
-                'content'      => '实验室将于7月1日搬迁至新校区，届时暂停开放。',
-                'cover'        => '',
-                'is_top'       => 0,
-                'status'       => 0,
-                'create_admin' => $admin1->admin_id,
-                'create_time'  => now()->subDays(30),
             ]
         );
 

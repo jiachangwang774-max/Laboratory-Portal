@@ -22,6 +22,7 @@ return new class extends Migration
             $table->integer('group_count')->default(1)->comment('分班数量');
             $table->string('group_name', 20)->nullable()->comment('指定班级，空为全部');
             $table->tinyInteger('status')->default(1)->comment('0下架 1正常展示');
+            $table->string('lab_id', 20)->default('software');
             $table->unsignedBigInteger('create_admin')->nullable()->comment('创建管理员ID');
             $table->dateTime('create_time')->useCurrent()->comment('创建时间');
         });

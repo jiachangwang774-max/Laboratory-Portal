@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('phone', 11)->nullable()->comment('手机号');
             $table->string('email', 50)->nullable()->comment('邮箱');
             $table->tinyInteger('department')->default(1)->comment('1软件开发 2人工智能');
+            $table->string('lab_id', 20)->default('software')->comment('software/ai');
             $table->tinyInteger('status')->default(1)->comment('账号状态 0禁用 1正常');
             $table->dateTime('create_time')->useCurrent()->comment('创建时间');
             $table->dateTime('update_time')->nullable()->useCurrentOnUpdate()->comment('更新时间');

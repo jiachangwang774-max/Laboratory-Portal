@@ -141,19 +141,27 @@ class TrainController extends Controller
     }
 
     /**
-     * 学生签到
+     * 学生签到（通过课程ID + 签到码）
      * POST /api/v1/user/train/checkin
+     *
+     * 传入 courseId 和 code，校验该课程下是否存在有效的签到码，
+     * 同时校验学生是否已报名该课程
      */
     public function checkin(Request $request): JsonResponse
     {
-        $userId = auth('user_api')->user()->user_id;
-        $code   = $request->input('code');
+        $userId   = auth('user_api')->user()->user_id;
+        $courseId = $request->input('courseId');
+        $code     = $request->input('code');
 
-        if (!$code || strlen($code) !== 6 || !ctype_digit($code)) {
-            return Result::error(\App\Enums\ResponseCode::PARAM_ERROR, '请输入有效的6位签到码');
+        if (!$courseId || !is_numeric($courseId)) {
+            return Result::error('课程ID不能为空', \App\Enums\ResponseCode::PARAM_ERROR);
         }
 
-        $data = $this->checkinService->studentCheckinByCode($userId, $code);
+        if (!$code || strlen($code) !== 6 || !ctype_digit($code)) {
+            return Result::error('请输入有效的6位签到码', \App\Enums\ResponseCode::PARAM_ERROR);
+        }
+
+        $data = $this->checkinService->studentCheckinByCode($userId, (int) $courseId, $code);
         return Result::success('签到成功', $data);
     }
 }

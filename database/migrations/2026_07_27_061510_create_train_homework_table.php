@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('homework_title', 100)->comment('作业标题');
             $table->text('homework_content')->nullable()->comment('作业要求');
             $table->string('group_name', 20)->nullable()->comment('指定班级，空为全部');
+            $table->string('lab_id', 20)->default('software');
             $table->dateTime('deadline')->nullable()->comment('截止提交时间');
             $table->dateTime('create_time')->useCurrent()->comment('创建时间');
         });

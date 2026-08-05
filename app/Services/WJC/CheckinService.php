@@ -70,23 +70,39 @@ class CheckinService
     }
 
     /**
-     * 学生通过签到码签到（无需指定 checkinId）
+     * 学生通过课程ID + 签到码签到
+     *
+     * 校验：课程下存在有效签到码 → 签到未结束 → 学生已报名该课程
      */
-    public function studentCheckinByCode(int $userId, string $code): array
+    public function studentCheckinByCode(int $userId, int $courseId, string $code): array
     {
-        $c = CourseCheckin::where('checkin_code', $code)
+        // 校验学生是否已报名该课程
+        $enrolled = \App\Models\TrainSign::where('user_id', $userId)
+            ->where('course_id', $courseId)
+            ->where('status', 1)
+            ->exists();
+
+        if (!$enrolled) {
+            throw new BusinessException('您未报名该课程，无法签到', ResponseCode::FORBIDDEN);
+        }
+
+        // 根据课程ID + 签到码查找进行中的签到
+        $c = CourseCheckin::where('course_id', $courseId)
+            ->where('checkin_code', $code)
             ->where('status', 1)
             ->where('end_time', '>', now())
             ->first();
 
-        if (!$c) throw new BusinessException('签到码无效或签到已结束', ResponseCode::BUSINESS_ERROR);
+        if (!$c) {
+            throw new BusinessException('签到码无效或签到已结束', ResponseCode::BUSINESS_ERROR);
+        }
 
         CheckinRecord::firstOrCreate(
             ['checkin_id' => $c->checkin_id, 'user_id' => $userId],
             ['checkin_method' => 'code', 'checkin_time' => now()]
         );
 
-        $this->logBusiness('学生扫码签到', ['user_id' => $userId, 'checkin_id' => $c->checkin_id, 'code' => $code]);
+        $this->logBusiness('学生扫码签到', ['user_id' => $userId, 'checkin_id' => $c->checkin_id, 'course_id' => $courseId, 'code' => $code]);
 
         return [
             'checkinId'  => $c->checkin_id,

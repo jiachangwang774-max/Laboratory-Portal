@@ -14,6 +14,7 @@ return new class extends Migration
             $table->unsignedBigInteger('session_id')->nullable()->comment('课程安排ID');
             $table->string('checkin_code', 6)->comment('6位签到码');
             $table->tinyInteger('status')->default(1)->comment('1进行中 0已结束');
+            $table->string('lab_id', 20)->default('software')->comment('实验室 software/ai');
             $table->unsignedBigInteger('create_admin')->nullable();
             $table->dateTime('create_time')->useCurrent();
             $table->dateTime('end_time')->nullable();
