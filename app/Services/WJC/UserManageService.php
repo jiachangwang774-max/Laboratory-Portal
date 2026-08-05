@@ -90,6 +90,9 @@ class UserManageService
         $isAdmin = ($data['role'] ?? 'student') === 'admin';
 
         if ($isAdmin) {
+            if (\App\Models\SysAdmin::where('admin_name', $data['username'])->exists()) {
+                throw new BusinessException('管理员账号已存在', ResponseCode::DATA_DUPLICATE);
+            }
             $u = \App\Models\SysAdmin::create([
                 'admin_name' => $data['username'],
                 'password'   => Hash::make('Pass@123'),
@@ -103,6 +106,9 @@ class UserManageService
             return ['userId' => null, 'adminId' => $u->admin_id, 'username' => $u->admin_name, 'realName' => $u->real_name, 'role' => 'admin'];
         }
 
+        if (SysUser::where('username', $data['username'])->exists()) {
+            throw new BusinessException('学员账号已存在', ResponseCode::DATA_DUPLICATE);
+        }
         $u = SysUser::create([
             'username'   => $data['username'],
             'password'   => Hash::make('Pass@123'),
