@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\WJC;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\WJC\ImportClassRequest;
 use App\Http\Requests\WJC\SignAuditRequest;
 use App\Http\Requests\WJC\SignListRequest;
 use App\Services\WJC\SignAuditService;
@@ -92,5 +93,18 @@ class SignAuditController extends Controller
         $id = (int) $r->input('groupId', 1);
         $data = $this->signService->classExport($groups[$id] ?? '一班');
         return Result::success('成功', ['list' => $data]);
+    }
+
+    /**
+     * 导入分班Excel
+     * POST /admin/sign/import
+     */
+    public function importClass(ImportClassRequest $r): JsonResponse
+    {
+        $file = $r->file('file');
+        $path = $file->storeAs('temp', uniqid() . '.' . $file->getClientOriginalExtension());
+        $data = $this->signService->importClass(storage_path('app/' . $path));
+        \Illuminate\Support\Facades\Storage::delete($path);
+        return Result::success("导入完成，成功 {$data['successCount']} 条，失败 {$data['failCount']} 条", $data);
     }
 }

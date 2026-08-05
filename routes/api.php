@@ -135,6 +135,7 @@ Route::prefix('admin/sign')->middleware('auth:admin_api')->group(function () {
     Route::post('/regroup',             [SignAuditController::class, 'regroup']);//重新分班
     Route::get('/class/list',           [SignAuditController::class, 'classList']);//按班级查看学生
     Route::get('/class/export',         [SignAuditController::class, 'classExport']);//导出班级学生
+    Route::post('/import',              [SignAuditController::class, 'importClass']);//导入分班Excel
 });
 
 // 4.4 课程管理 — 需鉴权
