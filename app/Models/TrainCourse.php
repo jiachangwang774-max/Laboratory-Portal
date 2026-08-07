@@ -23,6 +23,7 @@ class TrainCourse extends Model
         'max_sign',//最大报名人数
         'group_count',//分班数量
         'group_name',//指定班级
+        'lab_id',//实验室
         'status',//状态
         'create_admin',//创建人ID
         'create_time',//创建时间
