@@ -19,33 +19,62 @@ class UserManageService
     public function list(int $page = 1, int $size = 10, ?string $keyword = null, ?int $status = null): array
     {
         $labId = auth('admin_api')->user()->lab_id ?? 'software';
-        $query = SysUser::where('lab_id', $labId)->orderBy('create_time', 'desc');
+
+        // 学员
+        $userQuery = SysUser::where('lab_id', $labId);
         if ($keyword) {
-            $query->where(function ($q) use ($keyword) {
+            $userQuery->where(function ($q) use ($keyword) {
                 $q->where('real_name', 'like', "%{$keyword}%")
                   ->orWhere('student_id', 'like', "%{$keyword}%");
             });
         }
-        if ($status !== null) $query->where('status', $status);
+        if ($status !== null) $userQuery->where('status', $status);
+        $users = $userQuery->get()->map(fn($u) => [
+            'id'         => $u->user_id,
+            'username'   => $u->username,
+            'realName'   => $u->real_name,
+            'role'       => 'student',
+            'studentId'  => $u->student_id,
+            'className'  => SignApplication::where('user_id', $u->user_id)->where('audit_status', 1)->value('group_name') ?? '',
+            'college'    => $u->college,
+            'major'      => $u->major,
+            'grade'      => $u->grade,
+            'phone'      => PhoneHelper::mask($u->phone ?? ''),
+            'email'      => $u->email,
+            'status'     => $u->status,
+            'createTime' => $u->create_time,
+            'sortTime'   => $u->create_time ?? '',
+        ]);
 
-        $total = $query->count();
-        $list = $query->forPage($page, $size)->get()->map(function (SysUser $u) {
-            $app = SignApplication::where('user_id', $u->user_id)->where('audit_status', 1)->first();
-            return [
-                'userId'    => $u->user_id,
-                'username'  => $u->username,
-                'realName'  => $u->real_name,
-                'studentId' => $u->student_id,
-                'className' => $app->group_name ?? '',
-                'college'   => $u->college,
-                'major'     => $u->major,
-                'grade'     => $u->grade,
-                'phone'     => PhoneHelper::mask($u->phone ?? ''),
-                'email'     => $u->email,
-                'status'    => $u->status,
-                'createTime'=> $u->create_time,
-            ];
-        });
+        // 管理员
+        $adminQuery = \App\Models\SysAdmin::where('lab_id', $labId);
+        if ($keyword) {
+            $adminQuery->where(function ($q) use ($keyword) {
+                $q->where('real_name', 'like', "%{$keyword}%")
+                  ->orWhere('admin_name', 'like', "%{$keyword}%");
+            });
+        }
+        if ($status !== null) $adminQuery->where('status', $status);
+        $admins = $adminQuery->get()->map(fn($a) => [
+            'id'         => $a->admin_id,
+            'username'   => $a->admin_name,
+            'realName'   => $a->real_name,
+            'role'       => 'admin',
+            'studentId'  => null,
+            'className'  => '',
+            'college'    => null,
+            'major'      => null,
+            'grade'      => null,
+            'phone'      => PhoneHelper::mask($a->phone ?? ''),
+            'email'      => $a->email,
+            'status'     => $a->status,
+            'createTime' => $a->create_time ?? '',
+            'sortTime'   => $a->create_time ?? '',
+        ]);
+
+        $merged = $users->concat($admins)->sortByDesc('sortTime')->values();
+        $total = $merged->count();
+        $list = $merged->forPage($page, $size)->map(fn($r) => array_diff_key($r, ['sortTime' => '']));
 
         return ['total' => $total, 'list' => $list->values()];
     }
