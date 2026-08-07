@@ -18,4 +18,9 @@ class CheckinRecord extends Model
     {
         return $this->belongsTo(SysUser::class, 'user_id', 'user_id');
     }
+
+    public function checkin()
+    {
+        return $this->belongsTo(CourseCheckin::class, 'checkin_id', 'checkin_id');
+    }
 }

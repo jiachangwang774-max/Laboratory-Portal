@@ -58,11 +58,6 @@ Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
         Route::get('/my-course',          [TrainController::class, 'myCourse']);//获取我的课程详情（含随机分班班级号）
     });
 
-    Route::prefix('training')->group(function () {
-        Route::get('/detail', [TrainController::class, 'trainingDetail']);//获取培训详情列表
-        Route::get('/detail/{session_id}', [TrainController::class, 'trainingSessionDetail'])->whereNumber('session_id');//获取单个培训详情
-    });
-
     // 签到
     Route::prefix('checkin')->group(function () {
         Route::post('/', [TrainController::class, 'checkin']);//学生签到
@@ -76,6 +71,13 @@ Route::prefix('user/train')->middleware('auth:user_api')->group(function () {
         Route::get('/submitted',                  [TrainController::class, 'homeworkSubmitted']);//待批阅作业
         Route::get('/scored',                     [TrainController::class, 'homeworkScored']);//已批阅作业
         Route::post('/submit',                    [TrainController::class, 'homeworkSubmit']);//提交作业
+    });
+
+    // 学习表现
+    Route::prefix('performance')->group(function () {
+        Route::get('/attendance',     [TrainController::class, 'attendanceRate']);//课堂出勤率?groupName=
+        Route::get('/homework-rate',  [TrainController::class, 'homeworkRate']);//作业完成率?groupName=
+        Route::get('/avg-score',      [TrainController::class, 'avgScore']);//平均成绩?groupName=
     });
 });
 

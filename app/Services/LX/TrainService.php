@@ -4,12 +4,13 @@ namespace App\Services\LX;
 
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
-use App\Models\CourseSession;
 use App\Models\HomeworkSubmit;
 use App\Models\SignApplication;
 use App\Models\TrainCourse;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
+use App\Models\CourseCheckin;
+use App\Models\CheckinRecord;
 use App\Traits\LogTrait;
 use OSS\Core\OssException;
 use OSS\Http\RequestCore_Exception;
@@ -137,82 +138,6 @@ class TrainService
             'signStatus'  => $sign->status,
             'signTime'    => $sign->sign_time,
             'groupName'   => $application->group_name,    // 管理员端随机分配的班级号
-        ];
-    }
-
-    /**
-     * 培训详情列表（学生所在班级的课程安排）
-     *
-     * 根据学生所在班级过滤，仅返回 status=1 的课程安排，按排序字段升序。
-     * 课程 group_name 为空的表示全部班级可见，否则仅匹配班级的学生可见。
-     */
-    public function trainingDetail(int $userId): array
-    {
-        $groupName = $this->getUserGroupName($userId);
-
-        $sessions = CourseSession::enabled()
-            ->with('course')
-            ->orderBy('sort_order')
-            ->orderBy('session_date')
-            ->get()
-            ->filter(function (CourseSession $session) use ($groupName) {
-                $courseGroupName = $session->course->group_name ?? null;
-                // group_name 为空表示全部班级可见，否则仅匹配班级
-                if (empty($courseGroupName)) {
-                    return true;
-                }
-                return $courseGroupName === $groupName;
-            })
-            ->map(function (CourseSession $session) {
-                return [
-                    'sessionId'   => $session->session_id,
-                    'courseId'    => $session->course_id,
-                    'courseName'  => $session->course->course_name ?? '',
-                    'groupName'   => $session->course->group_name ?? '',
-                    'title'       => $session->title,
-                    'content'     => $session->content,
-                    'sessionDate' => $session->session_date,
-                    'endTime'     => $session->end_time,
-                    'location'    => $session->location,
-                    'instructor'  => $session->instructor,
-                ];
-            });
-
-        return $sessions->values()->toArray();
-    }
-
-    /**
-     * 单个培训详情（学生所在班级）
-     *
-     * 仅返回 status=1 且属于学生所在班级的课程安排
-     */
-    public function trainingSessionDetail(int $sessionId, int $userId): array
-    {
-        $groupName = $this->getUserGroupName($userId);
-
-        $session = CourseSession::enabled()->with('course')->find($sessionId);
-
-        if (!$session) {
-            throw new BusinessException('课程安排不存在或已下架', ResponseCode::DATA_NOT_FOUND);
-        }
-
-        // 校验该安排是否属于学生所在班级（group_name 为空则全部可见）
-        $courseGroupName = $session->course->group_name ?? null;
-        if (!empty($courseGroupName) && $courseGroupName !== $groupName) {
-            throw new BusinessException('该课程安排不属于您所在班级', ResponseCode::DATA_NOT_FOUND);
-        }
-
-        return [
-            'sessionId'   => $session->session_id,
-            'courseId'    => $session->course_id,
-            'courseName'  => $session->course->course_name ?? '',
-            'groupName'   => $courseGroupName ?? '',
-            'title'       => $session->title,
-            'content'     => $session->content,
-            'sessionDate' => $session->session_date,
-            'endTime'     => $session->end_time,
-            'location'    => $session->location,
-            'instructor'  => $session->instructor,
         ];
     }
 
@@ -367,34 +292,6 @@ class TrainService
     }
 
     /**
-     * 获取用户所在班级名称
-     *
-     * 从已审核通过的报名申请中获取 group_name
-     */
-    private function getUserGroupName(int $userId): ?string
-    {
-        $user = \App\Models\SysUser::find($userId);
-
-        if (!$user) {
-            throw new BusinessException('用户不存在', ResponseCode::DATA_NOT_FOUND);
-        }
-
-        $application = SignApplication::where('audit_status', 1)
-            ->where(function ($q) use ($userId, $user) {
-                $q->where('user_id', $userId)
-                  ->orWhere('student_id', $user->student_id);
-            })
-            ->latest('audit_time')
-            ->first();
-
-        if (!$application || empty($application->group_name)) {
-            throw new BusinessException('您尚未被分配到班级，请联系管理员', ResponseCode::DATA_NOT_FOUND);
-        }
-
-        return $application->group_name;
-    }
-
-    /**
      * 我的作业列表
      *
      * 只查询已通过审核课程下的作业，可按课程筛选，按创建时间倒序
@@ -513,6 +410,127 @@ class TrainService
             'submitFile' => $submit->submit_file,
             'submitTime' => $submit->submit_time,
         ];
+    }
+
+    /**
+     * 课堂出勤率（按班级汇总）
+     *
+     * 出勤率 = 学生在班级所有课程中的已签到次数 / 班级所有课程的总签到次数
+     */
+    public function attendanceRate(int $userId, string $groupName): array
+    {
+        $courseIds = $this->getClassCourseIds($groupName);
+
+        // 班级所有课程的总签到次数
+        $totalCheckins = CourseCheckin::whereIn('course_id', $courseIds)->count();
+
+        // 学生在这些课程中的已签到次数
+        $attendedCount = 0;
+        if ($totalCheckins > 0) {
+            $checkinIds = CourseCheckin::whereIn('course_id', $courseIds)
+                ->pluck('checkin_id')
+                ->toArray();
+
+            if (!empty($checkinIds)) {
+                $attendedCount = CheckinRecord::whereIn('checkin_id', $checkinIds)
+                    ->where('user_id', $userId)
+                    ->count();
+            }
+        }
+
+        $rate = $totalCheckins > 0 ? round($attendedCount / $totalCheckins * 100, 2) : 0;
+
+        return [
+            'groupName'      => $groupName,
+            'courseCount'    => count($courseIds),
+            'totalCheckins'  => $totalCheckins,
+            'attendedCount'  => $attendedCount,
+            'attendanceRate' => $rate,
+        ];
+    }
+
+    /**
+     * 作业完成率（按班级汇总）
+     *
+     * 完成率 = 学生在班级所有课程中的已提交作业数 / 班级总作业数
+     */
+    public function homeworkRate(int $userId, string $groupName): array
+    {
+        $courseIds = $this->getClassCourseIds($groupName);
+
+        // 班级所有课程的总作业数
+        $totalHomeworks = TrainHomework::whereIn('course_id', $courseIds)->count();
+
+        $homeworkIds = TrainHomework::whereIn('course_id', $courseIds)
+            ->pluck('homework_id')
+            ->toArray();
+
+        // 学生已提交的作业数
+        $submittedCount = 0;
+        if (!empty($homeworkIds)) {
+            $submittedCount = HomeworkSubmit::whereIn('homework_id', $homeworkIds)
+                ->where('user_id', $userId)
+                ->count();
+        }
+
+        $rate = $totalHomeworks > 0 ? round($submittedCount / $totalHomeworks * 100, 2) : 0;
+
+        return [
+            'groupName'       => $groupName,
+            'courseCount'     => count($courseIds),
+            'totalHomeworks'  => $totalHomeworks,
+            'submittedCount'  => $submittedCount,
+            'homeworkRate'    => $rate,
+        ];
+    }
+
+    /**
+     * 平均成绩（按班级汇总）
+     *
+     * 平均成绩 = 学生在班级所有课程中已批阅作业分数的平均值
+     */
+    public function avgScore(int $userId, string $groupName): array
+    {
+        $courseIds = $this->getClassCourseIds($groupName);
+
+        $homeworkIds = TrainHomework::whereIn('course_id', $courseIds)
+            ->pluck('homework_id')
+            ->toArray();
+
+        $scoredCount = 0;
+        $avgScore = 0;
+
+        if (!empty($homeworkIds)) {
+            $scores = HomeworkSubmit::whereIn('homework_id', $homeworkIds)
+                ->where('user_id', $userId)
+                ->whereNotNull('score')
+                ->get(['score']);
+
+            $scoredCount = $scores->count();
+            $avgScore = $scoredCount > 0 ? round($scores->avg('score'), 1) : 0;
+        }
+
+        return [
+            'groupName'   => $groupName,
+            'courseCount' => count($courseIds),
+            'scoredCount' => $scoredCount,
+            'avgScore'    => $avgScore,
+        ];
+    }
+
+    /**
+     * 获取班级下所有课程的 course_id
+     *
+     * group_name 匹配的课程 + group_name 为空的课程（全部班级可见）
+     */
+    private function getClassCourseIds(string $groupName): array
+    {
+        return TrainCourse::where(function ($q) use ($groupName) {
+                $q->where('group_name', $groupName)
+                  ->orWhereNull('group_name');
+            })
+            ->pluck('course_id')
+            ->toArray();
     }
 
 }

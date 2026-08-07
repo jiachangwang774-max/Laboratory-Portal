@@ -31,7 +31,7 @@ class TrainController extends Controller
 
     /**
      * 获取我的课程详情（学生端）
-     * GET /api/v1/user/train/my-course
+     * GET /api/v1/user/train/course/my-course
      *
      * 获取当前登录学生通过报名审核后随机分配的课程详情及班级号
      */
@@ -39,28 +39,6 @@ class TrainController extends Controller
     {
         $userId = auth('user_api')->user()->user_id;
         $data = $this->trainService->myCourse($userId);
-        return Result::success('成功', $data);
-    }
-
-    /**
-     * 获取培训详情列表（学生所在班级的课程安排）
-     * GET /api/v1/user/train/training/detail
-     */
-    public function trainingDetail(): JsonResponse
-    {
-        $userId = auth('user_api')->user()->user_id;
-        $data = $this->trainService->trainingDetail($userId);
-        return Result::success('成功', $data);
-    }
-
-    /**
-     * 获取单个培训详情（学生所在班级）
-     * GET /api/v1/user/train/training/detail/{session_id}
-     */
-    public function trainingSessionDetail(int $session_id): JsonResponse
-    {
-        $userId = auth('user_api')->user()->user_id;
-        $data = $this->trainService->trainingSessionDetail($session_id, $userId);
         return Result::success('成功', $data);
     }
 
@@ -154,14 +132,71 @@ class TrainController extends Controller
         $code     = $request->input('code');
 
         if (!$courseId || !is_numeric($courseId)) {
-            return Result::error('课程ID不能为空', \App\Enums\ResponseCode::PARAM_ERROR);
+            return Result::error(\App\Enums\ResponseCode::PARAM_ERROR, '课程ID不能为空');
         }
 
         if (!$code || strlen($code) !== 6 || !ctype_digit($code)) {
-            return Result::error('请输入有效的6位签到码', \App\Enums\ResponseCode::PARAM_ERROR);
+            return Result::error(\App\Enums\ResponseCode::PARAM_ERROR, '请输入有效的6位签到码');
         }
 
         $data = $this->checkinService->studentCheckinByCode($userId, (int) $courseId, $code);
         return Result::success('签到成功', $data);
+    }
+
+    /**
+     * 课堂出勤率
+     * GET /api/v1/user/train/performance/attendance?groupName=
+     *
+     * 出勤率 = 学生在该班级所有课程中的已签到次数 / 班级总签到次数
+     */
+    public function attendanceRate(Request $request): JsonResponse
+    {
+        $userId    = auth('user_api')->user()->user_id;
+        $groupName = $request->input('groupName');
+
+        if (!$groupName) {
+            return Result::error(\App\Enums\ResponseCode::PARAM_ERROR, '班级名称不能为空');
+        }
+
+        $data = $this->trainService->attendanceRate($userId, $groupName);
+        return Result::success('成功', $data);
+    }
+
+    /**
+     * 作业完成率
+     * GET /api/v1/user/train/performance/homework-rate?groupName=
+     *
+     * 完成率 = 学生在该班级所有课程中的已提交作业数 / 班级总作业数
+     */
+    public function homeworkRate(Request $request): JsonResponse
+    {
+        $userId    = auth('user_api')->user()->user_id;
+        $groupName = $request->input('groupName');
+
+        if (!$groupName) {
+            return Result::error(\App\Enums\ResponseCode::PARAM_ERROR, '班级名称不能为空');
+        }
+
+        $data = $this->trainService->homeworkRate($userId, $groupName);
+        return Result::success('成功', $data);
+    }
+
+    /**
+     * 平均成绩
+     * GET /api/v1/user/train/performance/avg-score?groupName=
+     *
+     * 平均成绩 = 学生在该班级所有课程中已批阅作业分数的平均值
+     */
+    public function avgScore(Request $request): JsonResponse
+    {
+        $userId    = auth('user_api')->user()->user_id;
+        $groupName = $request->input('groupName');
+
+        if (!$groupName) {
+            return Result::error(\App\Enums\ResponseCode::PARAM_ERROR, '班级名称不能为空');
+        }
+
+        $data = $this->trainService->avgScore($userId, $groupName);
+        return Result::success('成功', $data);
     }
 }
