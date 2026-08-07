@@ -83,11 +83,15 @@ class HomeworkService
 
     public function submitList(int $page = 1, int $size = 10, ?int $homeworkId = null, ?int $courseId = null, ?string $groupName = null): array
     {
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        $labUserIds = SignApplication::where('audit_status', 1)->where('lab_id', $labId)->pluck('user_id');
+
         if ($groupName) {
             $userIds = SignApplication::where('audit_status', 1)->where('group_name', $groupName)->pluck('user_id');
-            $query = HomeworkSubmit::with(['user', 'homework.course'])->whereIn('user_id', $userIds)->orderBy('submit_time', 'desc');
+            $filterIds = $labUserIds->intersect($userIds);
+            $query = HomeworkSubmit::with(['user', 'homework.course'])->whereIn('user_id', $filterIds)->orderBy('submit_time', 'desc');
         } else {
-            $query = HomeworkSubmit::with(['user', 'homework.course'])->orderBy('submit_time', 'desc');
+            $query = HomeworkSubmit::with(['user', 'homework.course'])->whereIn('user_id', $labUserIds)->orderBy('submit_time', 'desc');
         }
         if ($homeworkId) $query->where('homework_id', $homeworkId);
         if ($courseId) {
