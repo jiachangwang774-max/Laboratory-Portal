@@ -29,6 +29,9 @@ class ApplicationService
 
             // 只更新有值的字段
             $fillData = array_filter($data, fn($v) => $v !== null);
+            if (isset($fillData['department'])) {
+                $fillData['lab_id'] = $fillData['department'] == 2 ? 'ai' : 'software';
+            }
             $application->fill($fillData);
             $application->save();
 
@@ -40,6 +43,7 @@ class ApplicationService
             $application = SignApplication::create([
                 'student_id' => $studentId,
                 'status'     => 0,
+                'lab_id'     => ($data['department'] ?? 1) == 2 ? 'ai' : 'software',
                 ...$data,
             ]);
 

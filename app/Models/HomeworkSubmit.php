@@ -18,6 +18,7 @@ class HomeworkSubmit extends Model
         'submit_file',//提交文件
         'submit_time',//提交时间
         'score',//成绩
+        'lab_id',//实验室
     ];
 
     /**

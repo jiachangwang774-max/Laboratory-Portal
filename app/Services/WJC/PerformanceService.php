@@ -3,17 +3,20 @@
 namespace App\Services\WJC;
 
 use App\Models\HomeworkSubmit;
+use App\Models\SignApplication;
 use App\Models\TrainHomework;
 use App\Models\TrainSign;
 use App\Models\SysUser;
-use Illuminate\Support\Facades\DB;
 
 class PerformanceService
 {
     public function list(int $page = 1, int $size = 10, ?int $courseId = null, ?string $keyword = null): array
     {
-        // 从已报名学员出发
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        $userIds = SignApplication::where('audit_status', 1)->where('lab_id', $labId)->pluck('user_id');
+
         $query = TrainSign::with(['user', 'course'])
+            ->whereIn('user_id', $userIds)
             ->where('status', 1)
             ->orderBy('sign_time', 'desc');
 
