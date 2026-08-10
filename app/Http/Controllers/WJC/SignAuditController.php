@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\WJC;
 
+use App\Enums\ResponseCode;
+use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WJC\ImportClassRequest;
 use App\Http\Requests\WJC\SignAuditRequest;
@@ -10,6 +12,9 @@ use App\Services\WJC\SignAuditService;
 use App\Support\Result;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OSS\Core\OssException;
+use OSS\Http\RequestCore_Exception;
+use OSS\OssClient;
 
 class SignAuditController extends Controller
 {
@@ -98,13 +103,41 @@ class SignAuditController extends Controller
     /**
      * 导入分班Excel
      * POST /admin/sign/import
+     *
+     * 文件上传至 OSS class-imports/ 目录归档，同时本地临时解析
      */
     public function importClass(ImportClassRequest $r): JsonResponse
     {
         $file = $r->file('file');
-        $path = $file->storeAs('temp', uniqid() . '.' . $file->getClientOriginalExtension());
+        $ext  = $file->getClientOriginalExtension();
+        $object = 'class-imports/' . uniqid() . '.' . $ext;
+
+        // 上传至 OSS class-imports/ 目录
+        try {
+            $oss = new OssClient(
+                config('filesystems.disks.oss.access_id'),
+                config('filesystems.disks.oss.access_key'),
+                config('filesystems.disks.oss.endpoint'),
+            );
+            $oss->putObject(config('filesystems.disks.oss.bucket'), $object, $file->getContent());
+        } catch (OssException | RequestCore_Exception $e) {
+            \Illuminate\Support\Facades\Log::channel('exception')->error('OSS上传分班Excel失败', [
+                'object'  => $object,
+                'message' => $e->getMessage(),
+                'code'    => $e->getCode(),
+            ]);
+            throw new BusinessException('文件上传失败，请稍后重试', ResponseCode::THIRD_PARTY_ERROR);
+        }
+
+        $ossUrl = 'https://' . config('filesystems.disks.oss.bucket') . '.'
+                . config('filesystems.disks.oss.endpoint') . '/' . $object;
+
+        // 本地临时文件用于 ZipArchive 解析
+        $path = $file->storeAs('temp', uniqid() . '.' . $ext);
         $data = $this->signService->importClass(storage_path('app/' . $path));
         \Illuminate\Support\Facades\Storage::delete($path);
+
+        $data['ossUrl'] = $ossUrl;
         return Result::success("导入完成，成功 {$data['successCount']} 条，失败 {$data['failCount']} 条", $data);
     }
 }

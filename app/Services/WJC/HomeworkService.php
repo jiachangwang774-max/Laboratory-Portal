@@ -14,13 +14,14 @@ class HomeworkService
 {
     use LogTrait;
 
-    public function create(int $adminId, int $courseId, string $title, ?string $content, ?string $deadline, ?string $groupName = null): array
+    public function create(int $adminId, int $courseId, string $title, ?string $content, ?string $deadline, ?string $groupName = null, ?array $questions = null): array
     {
         $labId = auth('admin_api')->user()->lab_id ?? 'software';
         $hw = TrainHomework::create([
             'course_id'        => $courseId,
             'homework_title'   => $title,
             'homework_content' => $content,
+            'questions'        => $questions,
             'deadline'         => $deadline,
             'group_name'       => $groupName,
             'lab_id'           => $labId,
@@ -39,12 +40,33 @@ class HomeworkService
 
         if (isset($data['homeworkTitle'])) $hw->homework_title = $data['homeworkTitle'];
         if (isset($data['homeworkContent'])) $hw->homework_content = $data['homeworkContent'];
+        if (array_key_exists('questions', $data)) $hw->questions = $data['questions'];
         if (isset($data['deadline'])) $hw->deadline = $data['deadline'];
         if (array_key_exists('groupName', $data)) $hw->group_name = $data['groupName'];
         $hw->save();
 
         $this->logBusiness('管理员编辑作业', ['homework_id' => $homeworkId]);
         return ['homeworkId' => $hw->homework_id, 'homeworkTitle' => $hw->homework_title];
+    }
+
+    public function detail(int $homeworkId): array
+    {
+        $hw = TrainHomework::with('course')->find($homeworkId);
+        if (!$hw) throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($hw->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+
+        return [
+            'homeworkId'      => $hw->homework_id,
+            'courseId'        => $hw->course_id,
+            'courseName'      => $hw->course->course_name ?? '',
+            'homeworkTitle'   => $hw->homework_title,
+            'homeworkContent' => $hw->homework_content,
+            'questions'       => $hw->questions,       // 管理员可见正确答案
+            'groupName'       => $hw->group_name,
+            'deadline'        => $hw->deadline,
+            'submitCount'     => HomeworkSubmit::where('homework_id', $hw->homework_id)->count(),
+            'createTime'      => $hw->create_time,
+        ];
     }
 
     public function delete(int $homeworkId): void
@@ -71,6 +93,7 @@ class HomeworkService
                 'homeworkTitle'   => $hw->homework_title,
                 'groupName'       => $hw->group_name,
                 'deadline'        => $hw->deadline,
+                'questionCount'   => $hw->questions ? count($hw->questions) : 0,
                 'submitCount'     => HomeworkSubmit::where('homework_id', $hw->homework_id)->count(),
                 'createTime'      => $hw->create_time,
             ];
@@ -129,6 +152,8 @@ class HomeworkService
             'studentId'     => $app->student_id ?? '',
             'className'     => $app->group_name ?? '',
             'homeworkTitle' => $s->homework->homework_title ?? '',
+            'homeworkContent' => $s->homework->homework_content ?? '',
+            'questions'     => $s->homework->questions,       // 含 answer，管理员可见
             'courseName'    => $s->homework->course->course_name ?? '',
             'submitContent' => $s->submit_content,
             'submitFile'    => $s->submit_file,

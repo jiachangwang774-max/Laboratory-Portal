@@ -64,7 +64,8 @@ class TrainService
      * 我的课程详情（学生端）
      *
      * 获取当前登录学生通过报名审核后随机分配的课程详情及班级号。
-     * 优先查 train_sign，若无记录则按班级号直接匹配课程并自动补建报名记录。
+     * 始终返回 train_course 中对应班级最新的课程数据；
+     * 若已有 train_sign 记录但指向旧课程，则自动更新为最新课程。
      */
     public function myCourse(int $userId): array
     {
@@ -87,38 +88,50 @@ class TrainService
             throw new BusinessException('未找到您的报名记录，请先完成报名', ResponseCode::DATA_NOT_FOUND);
         }
 
-        // 查找用户的课程报名记录
+        if (empty($application->group_name)) {
+            throw new BusinessException('您尚未被分配到班级，请联系管理员', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        // 根据 group_name（如"一班"）提取班级序号，通过 group_count 匹配课程
+        $classNumber = $this->parseClassNumber($application->group_name);
+        if ($classNumber === null) {
+            throw new BusinessException('班级信息异常，请联系管理员', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        // 始终查询 train_course 中该班级最新上架的课程
+        // group_count >= classNumber：如 group_count=3 表示课程覆盖一班/二班/三班
+        $course = TrainCourse::enabled()
+            ->where('group_count', '>=', $classNumber)
+            ->latest('create_time')
+            ->first();
+
+        if (!$course) {
+            throw new BusinessException('您所在班级暂无课程，请等待管理员发布', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        // 查找或更新用户的 train_sign 记录，确保指向最新课程
         $sign = TrainSign::where('user_id', $userId)
             ->where('status', 1)
-            ->with('course')
             ->latest('sign_time')
             ->first();
 
-        // 若无 train_sign 记录，按班级号直接匹配课程并自动补建
-        if (!$sign || !$sign->course) {
-            if (empty($application->group_name)) {
-                throw new BusinessException('您尚未被分配到班级，请联系管理员', ResponseCode::DATA_NOT_FOUND);
+        if ($sign) {
+            // 已有报名记录但指向旧课程时，更新为最新课程
+            if ((int) $sign->course_id !== (int) $course->course_id) {
+                $sign->course_id  = $course->course_id;
+                $sign->group_name = $application->group_name;
+                $sign->sign_time  = now();
+                $sign->save();
             }
-
-            $course = TrainCourse::enabled()
-                ->where('group_name', $application->group_name)
-                ->latest('create_time')
-                ->first();
-
-            if (!$course) {
-                throw new BusinessException('您所在班级暂无课程，请等待管理员发布', ResponseCode::DATA_NOT_FOUND);
-            }
-
-            // 自动补建 train_sign 记录
+        } else {
+            // 无记录则自动补建
             $sign = TrainSign::firstOrCreate(
                 ['user_id' => $userId, 'course_id' => $course->course_id],
                 ['group_name' => $application->group_name, 'status' => 1, 'sign_time' => now()]
             );
         }
 
-        $course = $sign->course ?? TrainCourse::find($sign->course_id);
-
-        // 已报名人数
+        // 已报名人数（最新课程）
         $signCount = TrainSign::where('course_id', $course->course_id)
             ->where('status', 1)
             ->count();
@@ -143,6 +156,8 @@ class TrainService
 
     /**
      * 单个作业详情（含当前学生的提交记录、评分、批注）
+     *
+     * 题目含 type（choice/judge/essay）但不含 answer，学生不可见正确答案
      */
     public function homeworkDetail(int $homeworkId, int $userId): array
     {
@@ -161,7 +176,7 @@ class TrainService
             'courseId'        => $homework->course_id,
             'courseName'      => $homework->course->course_name ?? '',
             'homeworkTitle'   => $homework->homework_title,
-            'homeworkContent' => $homework->homework_content,
+            'questions'       => $this->stripAnswers($homework->questions),
             'deadline'        => $homework->deadline,
             'createTime'      => $homework->create_time,
             'submitId'        => $submit ? $submit->submit_id : null,
@@ -199,7 +214,7 @@ class TrainService
                     'courseId'        => $h->course_id,
                     'courseName'      => $h->course->course_name ?? '',
                     'homeworkTitle'   => $h->homework_title,
-                    'homeworkContent' => $h->homework_content,
+                    'questions'       => $this->stripAnswers($h->questions),
                     'deadline'        => $h->deadline,
                     'createTime'      => $h->create_time,
                 ];
@@ -234,6 +249,7 @@ class TrainService
                     'homeworkTitle'   => $s->homework->homework_title ?? '',
                     'courseId'        => $s->homework->course_id ?? null,
                     'courseName'      => $s->homework->course->course_name ?? '',
+                    'questions'       => $this->stripAnswers($s->homework->questions ?? null),
                     'submitContent'   => $s->submit_content,
                     'submitFile'      => $s->submit_file,
                     'submitTime'      => $s->submit_time,
@@ -269,6 +285,7 @@ class TrainService
                     'homeworkTitle'   => $s->homework->homework_title ?? '',
                     'courseId'        => $s->homework->course_id ?? null,
                     'courseName'      => $s->homework->course->course_name ?? '',
+                    'questions'       => $s->homework->questions,       // 已批阅，学生可见正确答案
                     'submitContent'   => $s->submit_content,
                     'submitFile'      => $s->submit_file,
                     'submitTime'      => $s->submit_time,
@@ -319,7 +336,7 @@ class TrainService
                 'homeworkId'      => $homework->homework_id,
                 'courseId'        => $homework->course_id,
                 'homeworkTitle'   => $homework->homework_title,
-                'homeworkContent' => $homework->homework_content,
+                'questions'       => $this->stripAnswers($homework->questions),
                 'deadline'        => $homework->deadline,
                 'createTime'      => $homework->create_time,
             ];
@@ -343,6 +360,14 @@ class TrainService
 
         if (!$homework) {
             throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        // 若作业有结构化题目，校验提交内容为合法 JSON
+        if ($homework->questions && $content) {
+            $decoded = json_decode($content, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new BusinessException('作答数据格式错误', ResponseCode::PARAM_ERROR);
+            }
         }
 
         // 校验用户已报名该课程
@@ -521,16 +546,58 @@ class TrainService
     /**
      * 获取班级下所有课程的 course_id
      *
-     * group_name 匹配的课程 + group_name 为空的课程（全部班级可见）
+     * 通过 group_count 判断课程是否覆盖该班级：
+     * group_count >= classNumber（如 group_count=3 覆盖一班/二班/三班）
      */
     private function getClassCourseIds(string $groupName): array
     {
-        return TrainCourse::where(function ($q) use ($groupName) {
-                $q->where('group_name', $groupName)
-                  ->orWhereNull('group_name');
-            })
+        $classNumber = $this->parseClassNumber($groupName);
+        if ($classNumber === null) {
+            return [];
+        }
+
+        return TrainCourse::where('group_count', '>=', $classNumber)
             ->pluck('course_id')
             ->toArray();
+    }
+
+    /**
+     * 从班级名称（如"一班"）中提取数字序号
+     *
+     * @return int|null 一班→1, 二班→2, …；无法解析返回 null
+     */
+    private function parseClassNumber(string $groupName): ?int
+    {
+        $map = ['一班' => 1, '二班' => 2, '三班' => 3, '四班' => 4, '五班' => 5];
+        return $map[$groupName] ?? null;
+    }
+
+    /**
+     * 去除题目中的正确答案（学生端不可见 answer 字段）
+     *
+     * @param array|null $questions
+     * @return array|null
+     */
+    private function stripAnswers(?array $questions): ?array
+    {
+        if (!$questions) {
+            return null;
+        }
+
+        return array_map(function (array $q): array {
+            $safe = [
+                'id'    => $q['id']    ?? '',
+                'type'  => $q['type']  ?? '',
+                'title' => $q['title'] ?? '',
+            ];
+            if (!empty($q['options'])) {
+                $safe['options'] = $q['options'];
+            }
+            if (isset($q['score'])) {
+                $safe['score'] = $q['score'];
+            }
+            return $safe;
+        }, $questions);
     }
 
 }

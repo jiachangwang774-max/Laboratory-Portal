@@ -51,7 +51,7 @@ class AuthService
 
         return [
             'accessToken'  => $accessToken,
-            'userInfo'     => $this->formatUser($user),
+            'userInfo'     => $this->formatUser($user, true),
         ];
     }
 
@@ -80,7 +80,7 @@ class AuthService
         /** @var SysUser $user */
         $user = auth('user_api')->user();
 
-        return $this->formatUser($user);
+        return $this->formatUser($user, false);
     }
 
     /**
@@ -120,7 +120,7 @@ class AuthService
         }
 
         if (empty($updateData)) {
-            return $this->formatUser($user);
+            return $this->formatUser($user, false);
         }
 
         $before = $user->only(array_keys($updateData));
@@ -134,7 +134,7 @@ class AuthService
             ['user_id' => $user->user_id]
         );
 
-        return $this->formatUser($user);
+        return $this->formatUser($user, false);
     }
 
     /**
@@ -230,14 +230,16 @@ class AuthService
     /**
      * 格式化用户信息输出
      */
-    private function formatUser(SysUser $user): array
+    private function formatUser(SysUser $user, bool $maskPhone = true): array
     {
         return [
             'userId'     => $user->user_id,
             'username'   => $user->username,
             'realName'   => $user->real_name,
             'avatar'     => $user->avatar,
-            'phone'      => $user->phone ? PhoneHelper::mask($user->phone) : null,
+            'phone'      => $user->phone
+                ? ($maskPhone ? PhoneHelper::mask($user->phone) : $user->phone)
+                : null,
             'email'      => $user->email,
             'grade'      => $user->grade,
             'major'      => $user->major,

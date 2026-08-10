@@ -22,7 +22,8 @@ class HomeworkController extends Controller
         return Result::success('作业布置成功', $this->service->create(
             $adminId, (int) $r->validated('courseId'),
             $r->validated('homeworkTitle'), $r->validated('homeworkContent'),
-            $r->validated('deadline'), $r->validated('groupName')
+            $r->validated('deadline'), $r->validated('groupName'),
+            $r->validated('questions')
         ));
     }
 
@@ -35,6 +36,11 @@ class HomeworkController extends Controller
     {
         $this->service->delete($homeworkId);
         return Result::success('作业删除成功');
+    }
+
+    public function detail(int $homeworkId): JsonResponse
+    {
+        return Result::success('成功', $this->service->detail($homeworkId));
     }
 
     public function index(HomeworkListRequest $r): JsonResponse

@@ -166,6 +166,7 @@ Route::prefix('admin/homework')->middleware('auth:admin_api')->group(function ()
     Route::put('/update/{homeworkId}',  [HomeworkController::class, 'update'])->whereNumber('homeworkId');//编辑
     Route::delete('/delete/{homeworkId}', [HomeworkController::class, 'delete'])->whereNumber('homeworkId');//删除
     Route::get('/list',                 [HomeworkController::class, 'index']);//列表
+    Route::get('/detail/{homeworkId}',  [HomeworkController::class, 'detail'])->whereNumber('homeworkId');//详情
 });
 
 // 4.6 作业批改 — 需鉴权
