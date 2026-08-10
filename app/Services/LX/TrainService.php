@@ -92,21 +92,26 @@ class TrainService
             throw new BusinessException('您尚未被分配到班级，请联系管理员', ResponseCode::DATA_NOT_FOUND);
         }
 
+        // 获取用户所属实验室（优先从报名申请，其次从用户表，默认 software）
+        $labId = $application->lab_id ?: ($user->lab_id ?: 'software');
+
         // 根据 group_name（如"一班"）提取班级序号，通过 group_count 匹配课程
         $classNumber = $this->parseClassNumber($application->group_name);
         if ($classNumber === null) {
             throw new BusinessException('班级信息异常，请联系管理员', ResponseCode::DATA_NOT_FOUND);
         }
 
-        // 始终查询 train_course 中该班级最新上架的课程
+        // 始终查询 train_course 中该班级该实验室最新上架的课程
         // group_count >= classNumber：如 group_count=3 表示课程覆盖一班/二班/三班
+        // lab_id 区分两个实验室（software / ai），不同实验室的学员只能看到自己实验室的课程
         $course = TrainCourse::enabled()
+            ->where('lab_id', $labId)
             ->where('group_count', '>=', $classNumber)
             ->latest('create_time')
             ->first();
 
         if (!$course) {
-            throw new BusinessException('您所在班级暂无课程，请等待管理员发布', ResponseCode::DATA_NOT_FOUND);
+            throw new BusinessException('您所在实验室该班级暂无课程，请等待管理员发布', ResponseCode::DATA_NOT_FOUND);
         }
 
         // 查找或更新用户的 train_sign 记录，确保指向最新课程
@@ -164,6 +169,12 @@ class TrainService
         $homework = TrainHomework::find($homeworkId);
 
         if (!$homework) {
+            throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        // 校验作业所属课程是否属于当前用户所在实验室
+        $labId = $this->getUserLabId($userId);
+        if ($homework->lab_id && $homework->lab_id !== $labId) {
             throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
@@ -298,12 +309,17 @@ class TrainService
     }
 
     /**
-     * 获取用户已报名的课程ID列表
+     * 获取用户已报名的课程ID列表（仅限该用户所属实验室的课程）
      */
     private function getUserCourseIds(int $userId): array
     {
+        $labId = $this->getUserLabId($userId);
+
         return TrainSign::where('user_id', $userId)
             ->where('status', 1)
+            ->whereHas('course', function ($q) use ($labId) {
+                $q->where('lab_id', $labId);
+            })
             ->pluck('course_id')
             ->toArray();
     }
@@ -311,12 +327,18 @@ class TrainService
     /**
      * 我的作业列表
      *
-     * 只查询已通过审核课程下的作业，可按课程筛选，按创建时间倒序
+     * 只查询已通过审核课程下的作业（仅限该用户所属实验室），可按课程筛选，按创建时间倒序
      */
     public function homeworkList(int $userId, int $page = 1, int $size = 10, ?int $courseId = null): array
     {
+        $labId = $this->getUserLabId($userId);
+
+        // 获取用户已报名且属于该实验室的课程ID
         $approvedCourseIds = TrainSign::where('user_id', $userId)
             ->where('status', 1)
+            ->whereHas('course', function ($q) use ($labId) {
+                $q->where('lab_id', $labId);
+            })
             ->pluck('course_id');
 
         if ($approvedCourseIds->isEmpty()) {
@@ -368,6 +390,12 @@ class TrainService
             if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new BusinessException('作答数据格式错误', ResponseCode::PARAM_ERROR);
             }
+        }
+
+        // 校验作业所属课程是否属于当前用户所在实验室
+        $labId = $this->getUserLabId($userId);
+        if ($homework->lab_id && $homework->lab_id !== $labId) {
+            throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
         // 校验用户已报名该课程
@@ -444,7 +472,7 @@ class TrainService
      */
     public function attendanceRate(int $userId, string $groupName): array
     {
-        $courseIds = $this->getClassCourseIds($groupName);
+        $courseIds = $this->getClassCourseIds($groupName, $userId);
 
         // 班级所有课程的总签到次数
         $totalCheckins = CourseCheckin::whereIn('course_id', $courseIds)->count();
@@ -481,7 +509,7 @@ class TrainService
      */
     public function homeworkRate(int $userId, string $groupName): array
     {
-        $courseIds = $this->getClassCourseIds($groupName);
+        $courseIds = $this->getClassCourseIds($groupName, $userId);
 
         // 班级所有课程的总作业数
         $totalHomeworks = TrainHomework::whereIn('course_id', $courseIds)->count();
@@ -516,7 +544,7 @@ class TrainService
      */
     public function avgScore(int $userId, string $groupName): array
     {
-        $courseIds = $this->getClassCourseIds($groupName);
+        $courseIds = $this->getClassCourseIds($groupName, $userId);
 
         $homeworkIds = TrainHomework::whereIn('course_id', $courseIds)
             ->pluck('homework_id')
@@ -544,19 +572,23 @@ class TrainService
     }
 
     /**
-     * 获取班级下所有课程的 course_id
+     * 获取班级下所有课程的 course_id（仅限该用户所属实验室）
      *
      * 通过 group_count 判断课程是否覆盖该班级：
      * group_count >= classNumber（如 group_count=3 覆盖一班/二班/三班）
+     * lab_id 区分两个实验室（software / ai）
      */
-    private function getClassCourseIds(string $groupName): array
+    private function getClassCourseIds(string $groupName, int $userId): array
     {
         $classNumber = $this->parseClassNumber($groupName);
         if ($classNumber === null) {
             return [];
         }
 
-        return TrainCourse::where('group_count', '>=', $classNumber)
+        $labId = $this->getUserLabId($userId);
+
+        return TrainCourse::where('lab_id', $labId)
+            ->where('group_count', '>=', $classNumber)
             ->pluck('course_id')
             ->toArray();
     }
@@ -570,6 +602,38 @@ class TrainService
     {
         $map = ['一班' => 1, '二班' => 2, '三班' => 3, '四班' => 4, '五班' => 5];
         return $map[$groupName] ?? null;
+    }
+
+    /**
+     * 获取用户所属的实验室ID
+     *
+     * 优先从已审核通过的报名申请中获取，其次从用户表获取，默认返回 'software'
+     */
+    private function getUserLabId(int $userId): string
+    {
+        $user = \App\Models\SysUser::find($userId);
+
+        // 从已审核的报名申请中获取（同时按 user_id 和 student_id 匹配）
+        $application = SignApplication::where('audit_status', 1)
+            ->where(function ($q) use ($userId, $user) {
+                $q->where('user_id', $userId);
+                if ($user && $user->student_id) {
+                    $q->orWhere('student_id', $user->student_id);
+                }
+            })
+            ->latest('audit_time')
+            ->first();
+
+        if ($application && $application->lab_id) {
+            return $application->lab_id;
+        }
+
+        // 从用户表获取
+        if ($user && $user->lab_id) {
+            return $user->lab_id;
+        }
+
+        return 'software';
     }
 
     /**
