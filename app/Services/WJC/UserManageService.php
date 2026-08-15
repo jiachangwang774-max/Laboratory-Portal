@@ -35,7 +35,7 @@ class UserManageService
             'realName'   => $u->real_name,
             'role'       => 'student',
             'studentId'  => $u->student_id,
-            'className'  => SignApplication::where('user_id', $u->user_id)->where('audit_status', 1)->value('group_name') ?? '',
+            'className'  => SignApplication::where('student_id', $u->student_id)->where('audit_status', 1)->value('group_name') ?? '',
             'college'    => $u->college,
             'major'      => $u->major,
             'grade'      => $u->grade,
@@ -93,7 +93,7 @@ class UserManageService
             return ['homeworkTitle' => $s->homework->homework_title ?? '', 'courseName' => $s->homework->course->course_name ?? '', 'submitTime' => $s->submit_time, 'score' => $s->score, 'remark' => $s->remark];
         });
 
-        $app = SignApplication::where('user_id', $userId)->where('audit_status', 1)->first();
+        $app = SignApplication::where('student_id', $u->student_id)->where('audit_status', 1)->first();
         return [
             'userId'         => $u->user_id, 'username' => $u->username, 'realName' => $u->real_name,
             'studentId'      => $u->student_id, 'className' => $app->group_name ?? '',

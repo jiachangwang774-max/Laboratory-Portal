@@ -6,7 +6,8 @@ use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\CheckinRecord;
 use App\Models\CourseCheckin;
-use App\Models\SignApplication;
+use App\Models\SysUser;
+use App\Models\TrainSign;
 use App\Traits\LogTrait;
 
 class CheckinService
@@ -129,6 +130,73 @@ class CheckinService
     }
 
     /**
+     * 管理员批量签到（按学号）
+     *
+     * 学号去重后逐一校验：用户存在 → 已报名该课程 → 写入签到记录。
+     * 返回成功与失败明细。
+     */
+    public function batchCheckin(int $checkinId, array $studentIds): array
+    {
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+
+        $c = CourseCheckin::find($checkinId);
+        if (!$c) throw new BusinessException('签到不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($c->status !== 1) throw new BusinessException('签到已结束', ResponseCode::BUSINESS_ERROR);
+        if ($c->end_time && now()->gt($c->end_time)) throw new BusinessException('签到已超时', ResponseCode::BUSINESS_ERROR);
+        if ($c->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+
+        // 学号去重、去空
+        $studentIds = array_values(array_unique(array_filter(array_map('trim', $studentIds), 'strlen')));
+
+        $users = SysUser::whereIn('student_id', $studentIds)->get()->keyBy('student_id');
+
+        $success = [];
+        $failed  = [];
+
+        foreach ($studentIds as $studentId) {
+            $user = $users->get($studentId);
+
+            if (!$user) {
+                $failed[] = ['studentId' => $studentId, 'reason' => '学号不存在'];
+                continue;
+            }
+
+            $enrolled = TrainSign::where('user_id', $user->user_id)
+                ->where('course_id', $c->course_id)
+                ->where('status', 1)
+                ->exists();
+
+            if (!$enrolled) {
+                $failed[] = ['studentId' => $studentId, 'reason' => '未报名该课程'];
+                continue;
+            }
+
+            CheckinRecord::firstOrCreate(
+                ['checkin_id' => $checkinId, 'user_id' => $user->user_id],
+                ['checkin_method' => 'manual', 'checkin_time' => now(), 'lab_id' => $labId]
+            );
+
+            $success[] = $studentId;
+        }
+
+        $this->logBusiness('管理员批量签到', [
+            'admin_id'   => auth('admin_api')->user()->admin_id,
+            'checkin_id' => $checkinId,
+            'success'    => count($success),
+            'failed'     => count($failed),
+        ]);
+
+        return [
+            'checkinId'    => $checkinId,
+            'total'        => count($studentIds),
+            'successCount' => count($success),
+            'failedCount'  => count($failed),
+            'successList'  => $success,
+            'failedList'   => $failed,
+        ];
+    }
+
+    /**
      * 结束签到
      */
     public function close(int $checkinId): void
@@ -183,7 +251,7 @@ class CheckinService
     }
 
     /**
-     * 签到记录
+     * 签到记录（列出报名该课程的学员及签到状态）
      */
     public function records(int $checkinId): array
     {
@@ -191,25 +259,29 @@ class CheckinService
         if (!$c) throw new BusinessException('签到不存在', ResponseCode::DATA_NOT_FOUND);
         if ($c->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
-        $dept = auth('admin_api')->user()->department;
         $signedIds = CheckinRecord::where('checkin_id', $checkinId)->pluck('user_id');
 
-        $apps = \App\Models\SignApplication::where('audit_status', 1)
-            ->where('department', $dept)
-            ->orderBy('group_name')->orderBy('student_id')
-            ->get()->map(function ($app) use ($signedIds) {
-                $isSigned = $app->user_id && $signedIds->contains($app->user_id);
-                $record = $isSigned ? CheckinRecord::where('checkin_id', $app->checkin_id ?? 0)->where('user_id', $app->user_id)->first() : null;
+        $list = TrainSign::with('user')
+            ->where('course_id', $c->course_id)
+            ->where('status', 1)
+            ->orderBy('group_name')
+            ->orderBy('sign_time')
+            ->get()
+            ->map(function (TrainSign $sign) use ($signedIds, $checkinId) {
+                $isSigned = $signedIds->contains($sign->user_id);
+                $record = $isSigned
+                    ? CheckinRecord::where('checkin_id', $checkinId)->where('user_id', $sign->user_id)->first()
+                    : null;
                 return [
-                    'userId'     => $app->user_id,
-                    'realName'   => $app->name,
-                    'studentId'  => $app->student_id,
-                    'college'    => $app->college,
-                    'major'      => $app->major,
-                    'className'  => $app->group_name,
-                    'isSigned'   => $isSigned,
-                    'method'     => $record->checkin_method ?? null,
-                    'checkinTime'=> $record->checkin_time ?? null,
+                    'userId'      => $sign->user_id,
+                    'realName'    => $sign->user->real_name ?? '',
+                    'studentId'   => $sign->user->student_id ?? '',
+                    'college'     => $sign->user->college ?? '',
+                    'major'       => $sign->user->major ?? '',
+                    'className'   => $sign->group_name ?? '',
+                    'isSigned'    => $isSigned,
+                    'method'      => $record->checkin_method ?? null,
+                    'checkinTime' => $record->checkin_time ?? null,
                 ];
             });
 
@@ -218,9 +290,9 @@ class CheckinService
             'courseName'  => $c->course->course_name ?? '',
             'checkinCode' => $c->checkin_code,
             'status'      => $c->status,
-            'total'       => $apps->count(),
-            'signed'      => $signedIds->count(),
-            'list'        => $apps->values(),
+            'total'       => $list->count(),
+            'signed'      => $list->where('isSigned', true)->count(),
+            'list'        => $list->values(),
         ];
     }
 
