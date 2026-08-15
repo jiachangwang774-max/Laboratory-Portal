@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\WJC;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\WJC\CheckinBatchRequest;
 use App\Http\Requests\WJC\CheckinCreateRequest;
 use App\Http\Requests\WJC\CheckinListRequest;
 use App\Services\WJC\CheckinService;
@@ -66,6 +67,19 @@ class CheckinController extends Controller
         return Result::success('手动签到成功', $this->service->manualCheckin(
             (int) $r->input('checkinId'), (int) $r->input('userId')
         ));
+    }
+
+    /**
+     * 批量签到（按学号）
+     * POST /admin/checkin/batch
+     */
+    public function batch(CheckinBatchRequest $r): JsonResponse
+    {
+        $data = $this->service->batchCheckin(
+            (int) $r->validated('checkinId'),
+            $r->validated('studentIds')
+        );
+        return Result::success('批量签到完成', $data);
     }
 
     /**

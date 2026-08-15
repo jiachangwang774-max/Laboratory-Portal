@@ -199,6 +199,7 @@ Route::prefix('admin/checkin')->middleware('auth:admin_api')->group(function () 
     Route::get('/list',      [CheckinController::class, 'index']);//列表
     Route::get('/records',   [CheckinController::class, 'records']);//签到明细
     Route::put('/manual',    [CheckinController::class, 'manual']);//手动签到
+    Route::post('/batch',    [CheckinController::class, 'batch']);//批量签到（按学号）
     Route::get('/export',    [CheckinController::class, 'export']);//导出名单
     Route::delete('/delete', [CheckinController::class, 'delete']);//删除签到
 });
