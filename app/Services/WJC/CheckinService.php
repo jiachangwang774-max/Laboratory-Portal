@@ -17,7 +17,7 @@ class CheckinService
     /**
      * 发起签到，生成6位随机码
      */
-    public function create(int $adminId, int $courseId, ?int $sessionId, int $duration = 5): array
+    public function create(int $adminId, int $courseId, ?int $sessionId, ?int $duration = 5, ?string $endTime = null, ?string $title = null, ?string $className = null): array
     {
         $labId = auth('admin_api')->user()->lab_id ?? 'software';
 
@@ -25,6 +25,17 @@ class CheckinService
         CourseCheckin::where('lab_id', $labId)->where('course_id', $courseId)->where('status', 1)->update(['status' => 0, 'end_time' => now()]);
 
         $code = (string) random_int(100000, 999999);
+
+        if ($endTime) {
+            try {
+                $endTimeCarbon = \Carbon\Carbon::parse($endTime);
+            } catch (\Throwable $e) {
+                $endTimeCarbon = now()->addMinutes((int) $duration);
+            }
+        } else {
+            $endTimeCarbon = now()->addMinutes((int) $duration);
+        }
+
         $c = CourseCheckin::create([
             'course_id'    => $courseId,
             'session_id'   => $sessionId,
@@ -33,12 +44,14 @@ class CheckinService
             'lab_id'       => $labId,
             'create_admin' => $adminId,
             'create_time'  => now(),
-            'end_time'     => now()->addMinutes($duration),
+            'end_time'     => $endTimeCarbon,
+            'title'        => $title,
+            'class_name'   => $className,
         ]);
 
         $this->logBusiness('管理员发起签到', ['admin_id' => $adminId, 'checkin_id' => $c->checkin_id, 'code' => $code, 'duration' => $duration]);
 
-        return ['checkinId' => $c->checkin_id, 'checkinCode' => $code, 'courseId' => $courseId, 'endTime' => $c->end_time];
+        return ['checkinId' => $c->checkin_id, 'checkinCode' => $code, 'courseId' => $courseId, 'endTime' => $c->end_time, 'title' => $c->title, 'className' => $c->class_name];
     }
 
     /**
@@ -239,6 +252,8 @@ class CheckinService
                 'courseName'  => $c->course->course_name ?? '',
                 'sessionId'   => $c->session_id,
                 'checkinCode' => $c->checkin_code,
+                'title'       => $c->title ?? '',
+                'className'   => $c->class_name ?? '',
                 'status'      => $c->status,
                 'statusText'  => $c->status ? '进行中' : '已结束',
                 'signedCount' => $signedCount,

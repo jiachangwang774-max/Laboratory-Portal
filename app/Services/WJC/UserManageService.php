@@ -158,8 +158,54 @@ class UserManageService
             'status'     => 1,
         ]);
 
+        // 有学号时：自动分班并写入培训名单（sign_application）
+        if (!empty($data['studentId'])) {
+            $this->syncTrainRoster($u, $data, $labId);
+        }
+
         $this->logBusiness('管理员创建学员账号', ['user_id' => $u->user_id, 'username' => $u->username]);
         return ['userId' => $u->user_id, 'username' => $u->username, 'realName' => $u->real_name, 'role' => 'student'];
+    }
+
+    private function syncTrainRoster(SysUser $u, array $data, string $labId): void
+    {
+        $groups = ['一班', '二班', '三班'];
+        $last = SignApplication::where('audit_status', 1)
+            ->where('lab_id', $labId)
+            ->whereNotNull('group_name')
+            ->orderBy('audit_time', 'desc')
+            ->value('group_name');
+        $idx = $last ? (array_search($last, $groups) + 1) % 3 : 0;
+        $groupName = $groups[$idx];
+
+        $app = SignApplication::where('student_id', $u->student_id)->first();
+
+        if (!$app) {
+            SignApplication::create([
+                'student_id'   => $u->student_id,
+                'name'         => $u->real_name,
+                'user_id'      => $u->user_id,
+                'department'   => $labId === 'ai' ? 2 : 1,
+                'college'      => $u->college,
+                'major'        => $u->major,
+                'status'       => 1,
+                'audit_status' => 1,
+                'group_name'   => $groupName,
+                'lab_id'       => $labId,
+                'submit_time'  => now(),
+                'audit_time'   => now(),
+            ]);
+        } else {
+            $app->name         = $u->real_name ?: $app->name;
+            $app->user_id      = $u->user_id;
+            $app->college      = $u->college ?: $app->college;
+            $app->major        = $u->major ?: $app->major;
+            $app->status       = 1;
+            $app->audit_status = 1;
+            $app->group_name   = $app->group_name ?: $groupName;
+            $app->lab_id       = $labId;
+            $app->save();
+        }
     }
 
     public function delete(int $userId): void

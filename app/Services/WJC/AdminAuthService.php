@@ -105,38 +105,52 @@ class AdminAuthService
     /**
      * 发送管理员找回密码验证码
      */
-    public function sendCode(string $email): void
+    public function sendCode(string $adminName): void
     {
-        $admin = SysAdmin::where('email', $email)->first();
+        $admin = SysAdmin::where('admin_name', $adminName)->first();
 
         if (!$admin) {
-            throw new BusinessException('该邮箱未绑定管理员账号', ResponseCode::DATA_NOT_FOUND);
+            throw new BusinessException('管理员账号不存在', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        if (empty($admin->email)) {
+            throw new BusinessException('该账号未绑定邮箱，无法找回密码', ResponseCode::BUSINESS_ERROR);
         }
 
         $code = (string) random_int(100000, 999999);
 
         VerifyCode::create([
-            'target'      => $email,
+            'target'      => $admin->email,
             'code'        => $code,
             'type'        => VerifyCodeType::ADMIN_PWD_RESET->value,
             'expire_time' => now()->addMinutes(5),
             'create_time' => now(),
         ]);
 
-        Mail::to($email)->send(new VerificationCodeMail($code, '管理员重置密码'));
+        Mail::to($admin->email)->send(new VerificationCodeMail($code, '管理员重置密码'));
 
         $this->logBusiness('管理员找回密码验证码已发送', [
             'admin_id' => $admin->admin_id,
-            'email'    => $email,
+            'email'    => $admin->email,
         ]);
     }
 
     /**
      * 管理员重置密码
      */
-    public function resetPwd(string $email, string $code, string $newPwd): void
+    public function resetPwd(string $adminName, string $code, string $newPwd): void
     {
-        $verifyCode = VerifyCode::where('target', $email)
+        $admin = SysAdmin::where('admin_name', $adminName)->first();
+
+        if (!$admin) {
+            throw new BusinessException('管理员不存在', ResponseCode::DATA_NOT_FOUND);
+        }
+
+        if (empty($admin->email)) {
+            throw new BusinessException('该账号未绑定邮箱，无法重置密码', ResponseCode::BUSINESS_ERROR);
+        }
+
+        $verifyCode = VerifyCode::where('target', $admin->email)
             ->where('code', $code)
             ->where('type', VerifyCodeType::ADMIN_PWD_RESET->value)
             ->where('expire_time', '>', now())
@@ -144,12 +158,6 @@ class AdminAuthService
 
         if (!$verifyCode) {
             throw new BusinessException('验证码错误或已过期', ResponseCode::VERIFY_CODE_ERROR);
-        }
-
-        $admin = SysAdmin::where('email', $email)->first();
-
-        if (!$admin) {
-            throw new BusinessException('管理员不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
         if (Hash::check($newPwd, $admin->password)) {

@@ -13,6 +13,7 @@ class CourseCheckin extends Model
     protected $fillable = [
         'course_id', 'session_id', 'checkin_code', 'status',
         'create_admin', 'lab_id', 'create_time', 'end_time',
+        'title', 'class_name',
     ];
 
     public function course()

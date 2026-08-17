@@ -14,16 +14,15 @@ class AdminSendCodeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => 'required|email|max:50',
+            'adminName' => 'required|string|max:50',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'email.required' => '邮箱不能为空',
-            'email.email'    => '邮箱格式不正确',
-            'email.max'      => '邮箱不能超过50个字符',
+            'adminName.required' => '管理员账号不能为空',
+            'adminName.max'      => '管理员账号不能超过50个字符',
         ];
     }
 }

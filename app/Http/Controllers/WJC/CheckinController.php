@@ -22,7 +22,16 @@ class CheckinController extends Controller
     public function create(CheckinCreateRequest $r): JsonResponse
     {
         $adminId = auth('admin_api')->user()->admin_id;
-        $data = $this->service->create($adminId, (int) $r->validated('courseId'), $r->input('sessionId') ? (int) $r->input('sessionId') : null, (int) $r->input('duration', 5));
+        $endTime = $r->input('endTime') ?: $r->input('end_time');
+        $data = $this->service->create(
+            $adminId,
+            (int) $r->validated('courseId'),
+            $r->input('sessionId') ? (int) $r->input('sessionId') : null,
+            (int) $r->input('duration', 5),
+            $endTime ? (string) $endTime : null,
+            $r->input('title'),
+            $r->input('className')
+        );
         return Result::success('签到已发起', $data);
     }
 

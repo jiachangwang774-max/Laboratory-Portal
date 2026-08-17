@@ -5,9 +5,11 @@ namespace App\Services\WJC;
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\SignApplication;
+use App\Models\SysUser;
 use App\Models\TrainCourse;
 use App\Models\TrainSign;
 use App\Traits\LogTrait;
+use Illuminate\Support\Facades\Hash;
 
 class SignAuditService
 {
@@ -102,10 +104,11 @@ class SignAuditService
         $app->audit_time   = now();
         $app->save();
 
-        // 审核通过后，为该学生创建课程报名记录（随机分班）
-        if ($app->user_id) {
-            $this->syncTrainSign($app);
-        }
+        // 审核通过后：自动创建/更新学员账号，并回填 user_id
+        $this->syncStudentAccount($app);
+
+        // 为该学生创建课程报名记录（分班）
+        $this->syncTrainSign($app);
 
         $this->logBusiness('管理员审核通过报名申请', [
             'admin_id'    => $adminId,
@@ -132,6 +135,37 @@ class SignAuditService
             ->value('group_name');
         $idx = $last ? (array_search($last, $groups) + 1) % 3 : 0;
         return $groups[$idx];
+    }
+
+    /**
+     * 审核通过后自动创建/更新学员账号，并回填 user_id
+     */
+    private function syncStudentAccount(SignApplication $app): void
+    {
+        $user = SysUser::where('student_id', $app->student_id)->first();
+
+        if (!$user) {
+            $user = SysUser::create([
+                'username'   => $app->student_id,
+                'password'   => Hash::make('Pass@123'),
+                'real_name'  => $app->name,
+                'student_id' => $app->student_id,
+                'college'    => $app->college,
+                'major'      => $app->major,
+                'lab_id'     => $app->lab_id ?: 'software',
+                'status'     => 1,
+            ]);
+        } else {
+            $user->real_name = $app->name ?: $user->real_name;
+            $user->college   = $app->college ?: $user->college;
+            $user->major     = $app->major ?: $user->major;
+            $user->lab_id    = $app->lab_id ?: $user->lab_id;
+            $user->status    = 1;
+            $user->save();
+        }
+
+        $app->user_id = $user->user_id;
+        $app->save();
     }
 
     /**

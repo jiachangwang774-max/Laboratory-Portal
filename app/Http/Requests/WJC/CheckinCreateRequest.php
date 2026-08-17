@@ -14,6 +14,9 @@ class CheckinCreateRequest extends FormRequest
             'courseId'  => 'required|integer|exists:train_course,course_id',
             'sessionId' => 'nullable|integer|exists:course_sessions,session_id',
             'duration'  => 'nullable|integer|min:1|max:120',
+            'endTime'   => 'nullable|string|max:30',
+            'title'     => 'nullable|string|max:100',
+            'className' => 'nullable|string|max:20',
         ];
     }
 
