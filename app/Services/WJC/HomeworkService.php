@@ -107,15 +107,18 @@ class HomeworkService
     public function submitList(int $page = 1, int $size = 10, ?int $homeworkId = null, ?int $courseId = null, ?string $groupName = null): array
     {
         $labId = auth('admin_api')->user()->lab_id ?? 'software';
-        $labUserIds = SignApplication::where('audit_status', 1)->where('lab_id', $labId)->pluck('user_id');
+        $rosterQuery = SignApplication::where('audit_status', 1)
+            ->where('lab_id', $labId)
+            ->whereNotNull('group_name');
 
-        if ($groupName) {
-            $userIds = SignApplication::where('audit_status', 1)->where('group_name', $groupName)->pluck('user_id');
-            $filterIds = $labUserIds->intersect($userIds);
-            $query = HomeworkSubmit::with(['user', 'homework.course'])->whereIn('user_id', $filterIds)->orderBy('submit_time', 'desc');
-        } else {
-            $query = HomeworkSubmit::with(['user', 'homework.course'])->whereIn('user_id', $labUserIds)->orderBy('submit_time', 'desc');
-        }
+        // 传 groupName 时按班级进一步过滤，不传时取所有已分班学员，无分班记录的提交一律不出现
+        $filterIds = $groupName
+            ? (clone $rosterQuery)->where('group_name', $groupName)->pluck('user_id')
+            : $rosterQuery->pluck('user_id');
+
+        $query = HomeworkSubmit::with(['user', 'homework.course'])
+            ->whereIn('user_id', $filterIds)
+            ->orderBy('submit_time', 'desc');
         if ($homeworkId) $query->where('homework_id', $homeworkId);
         if ($courseId) {
             $homeworkIds = TrainHomework::where('course_id', $courseId)->pluck('homework_id');

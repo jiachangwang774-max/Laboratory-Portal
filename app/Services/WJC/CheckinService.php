@@ -6,6 +6,7 @@ use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\CheckinRecord;
 use App\Models\CourseCheckin;
+use App\Models\SignApplication;
 use App\Models\SysUser;
 use App\Models\TrainSign;
 use App\Traits\LogTrait;
@@ -243,9 +244,16 @@ class CheckinService
         if ($sessionId) $query->where('session_id', $sessionId);
 
         $total = $query->count();
-        $list  = $query->forPage($page, $size)->get()->map(function (CourseCheckin $c) {
+        $list  = $query->forPage($page, $size)->get()->map(function (CourseCheckin $c) use ($labId) {
             $this->autoCloseExpired($c);
             $signedCount = CheckinRecord::where('checkin_id', $c->checkin_id)->count();
+
+            // 总人数：发起签到指定班级时取该班已通过审核人数，未指定班级时取该实验室全部通过人数
+            $rosterQuery = SignApplication::where('lab_id', $labId)->where('audit_status', 1);
+            $totalCount = !empty($c->class_name)
+                ? (clone $rosterQuery)->where('group_name', $c->class_name)->count()
+                : $rosterQuery->count();
+
             return [
                 'checkinId'   => $c->checkin_id,
                 'courseId'    => $c->course_id,
@@ -257,6 +265,7 @@ class CheckinService
                 'status'      => $c->status,
                 'statusText'  => $c->status ? '进行中' : '已结束',
                 'signedCount' => $signedCount,
+                'totalCount'  => $totalCount,
                 'createTime'  => $c->create_time,
                 'endTime'     => $c->end_time,
             ];

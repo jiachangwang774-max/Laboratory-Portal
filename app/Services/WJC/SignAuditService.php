@@ -9,6 +9,8 @@ use App\Models\SysUser;
 use App\Models\TrainCourse;
 use App\Models\TrainSign;
 use App\Traits\LogTrait;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class SignAuditService
@@ -99,28 +101,36 @@ class SignAuditService
 
         $adminId = auth('admin_api')->user()->admin_id;
 
-        $app->audit_status = 1;
-        $app->audit_admin  = $adminId;
-        $app->audit_time   = now();
-        $app->save();
+        // 分班缺失时均衡分班到一班/二班/三班
+        if (empty($app->group_name)) {
+            $app->group_name = $this->assignGroup();
+        }
 
-        // 审核通过后：自动创建/更新学员账号，并回填 user_id
-        $this->syncStudentAccount($app);
+        // 用事务包裹 sign_application + sys_user + train_sign，保证要么都写要么都不写
+        return DB::transaction(function () use ($app, $adminId, $id) {
+            $app->audit_status = 1;
+            $app->audit_admin  = $adminId;
+            $app->audit_time   = now();
+            $app->save();
 
-        // 为该学生创建课程报名记录（分班）
-        $this->syncTrainSign($app);
+            // 审核通过后：自动创建/更新学员账号，并回填 user_id
+            $this->syncStudentAccount($app);
 
-        $this->logBusiness('管理员审核通过报名申请', [
-            'admin_id'    => $adminId,
-            'student_id'  => $app->student_id,
-            'application_id' => $id,
-        ]);
+            // 为该学生创建课程报名记录（分班）
+            $this->syncTrainSign($app);
 
-        return [
-            'id'          => $app->id,
-            'auditStatus' => $app->audit_status,
-            'auditTime'   => $app->audit_time,
-        ];
+            $this->logBusiness('管理员审核通过报名申请', [
+                'admin_id'       => $adminId,
+                'student_id'     => $app->student_id,
+                'application_id' => $id,
+            ]);
+
+            return [
+                'id'          => $app->id,
+                'auditStatus' => $app->audit_status,
+                'auditTime'   => $app->audit_time,
+            ];
+        });
     }
 
     /**
@@ -142,30 +152,51 @@ class SignAuditService
      */
     private function syncStudentAccount(SignApplication $app): void
     {
-        $user = SysUser::where('student_id', $app->student_id)->first();
+        $studentId = $app->student_id ?: null;
 
-        if (!$user) {
-            $user = SysUser::create([
-                'username'   => $app->student_id,
-                'password'   => Hash::make('Pass@123'),
-                'real_name'  => $app->name,
-                'student_id' => $app->student_id,
-                'college'    => $app->college,
-                'major'      => $app->major,
-                'lab_id'     => $app->lab_id ?: 'software',
-                'status'     => 1,
-            ]);
-        } else {
-            $user->real_name = $app->name ?: $user->real_name;
-            $user->college   = $app->college ?: $user->college;
-            $user->major     = $app->major ?: $user->major;
-            $user->lab_id    = $app->lab_id ?: $user->lab_id;
-            $user->status    = 1;
-            $user->save();
+        if (empty($studentId)) {
+            throw new BusinessException(
+                '审核失败：报名记录缺少学号，无法创建学员账号',
+                ResponseCode::BUSINESS_ERROR
+            );
         }
 
-        $app->user_id = $user->user_id;
-        $app->save();
+        try {
+            $user = SysUser::where('student_id', $studentId)->first();
+
+            if (!$user) {
+                $user = SysUser::create([
+                    'username'   => $studentId,
+                    'password'   => Hash::make('Pass@123'),
+                    'real_name'  => $app->name ?: $studentId,
+                    'student_id' => $studentId,
+                    'college'    => $app->college,
+                    'major'      => $app->major,
+                    'lab_id'     => $app->lab_id ?: 'software',
+                    'status'     => 1,
+                ]);
+            } else {
+                $user->real_name = $app->name ?: $user->real_name;
+                $user->college   = $app->college ?: $user->college;
+                $user->major     = $app->major ?: $user->major;
+                $user->lab_id    = $app->lab_id ?: $user->lab_id;
+                $user->status    = 1;
+                $user->save();
+            }
+
+            $app->user_id = $user->user_id;
+            $app->save();
+        } catch (QueryException $e) {
+            $this->logException('审核通过写入学员账号失败', $e, [
+                'student_id'     => $studentId,
+                'application_id' => $app->id,
+                'sql_state'      => $e->getCode(),
+            ]);
+            throw new BusinessException(
+                '审核失败：学员账号写入异常（学号或账号可能已存在），已回滚',
+                ResponseCode::UNIQUE_CONFLICT
+            );
+        }
     }
 
     /**

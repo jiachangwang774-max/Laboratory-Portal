@@ -9,7 +9,10 @@ use App\Models\TrainSign;
 use App\Models\HomeworkSubmit;
 use App\Models\SignApplication;
 use App\Helpers\PhoneHelper;
+use App\Models\SysAdmin;
 use App\Traits\LogTrait;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserManageService
@@ -79,11 +82,36 @@ class UserManageService
         return ['total' => $total, 'list' => $list->values()];
     }
 
-    public function detail(int $userId): array
+    public function detail(int $userId, ?string $role = null): array
+    {
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+
+        // 优先按 role 参数查找；未传则先查学员表，再查管理员表
+        if ($role === 'admin') {
+            return $this->detailAdmin($userId, $labId);
+        }
+        if ($role === 'student') {
+            return $this->detailStudent($userId, $labId);
+        }
+
+        $u = SysUser::find($userId);
+        if ($u) {
+            return $this->detailStudent($userId, $labId);
+        }
+
+        $a = SysAdmin::find($userId);
+        if ($a) {
+            return $this->detailAdmin($userId, $labId);
+        }
+
+        throw new BusinessException('账号不存在', ResponseCode::DATA_NOT_FOUND);
+    }
+
+    private function detailStudent(int $userId, string $labId): array
     {
         $u = SysUser::find($userId);
         if (!$u) throw new BusinessException('学员不存在', ResponseCode::DATA_NOT_FOUND);
-        if ($u->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+        if ($u->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
         $signs = TrainSign::with('course')->where('user_id', $userId)->orderBy('sign_time', 'desc')->get()->map(function ($s) {
             return ['signId' => $s->sign_id, 'courseName' => $s->course->course_name ?? '', 'status' => $s->status, 'signTime' => $s->sign_time];
@@ -96,6 +124,7 @@ class UserManageService
         $app = SignApplication::where('student_id', $u->student_id)->where('audit_status', 1)->first();
         return [
             'userId'         => $u->user_id, 'username' => $u->username, 'realName' => $u->real_name,
+            'role'           => 'student',
             'studentId'      => $u->student_id, 'className' => $app->group_name ?? '',
             'college'        => $u->college, 'major' => $u->major,
             'grade'          => $u->grade, 'phone' => $u->phone, 'email' => $u->email,
@@ -103,6 +132,32 @@ class UserManageService
             'signList'       => $signs,
             'homeworkScores' => $scores,
             'createTime'     => $u->create_time,
+        ];
+    }
+
+    private function detailAdmin(int $adminId, string $labId): array
+    {
+        $a = SysAdmin::find($adminId);
+        if (!$a) throw new BusinessException('管理员不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($a->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+
+        return [
+            'userId'     => $a->admin_id,
+            'username'   => $a->admin_name,
+            'realName'   => $a->real_name,
+            'role'       => 'admin',
+            'studentId'  => null,
+            'className'  => '',
+            'college'    => null,
+            'major'      => null,
+            'grade'      => null,
+            'phone'      => $a->phone,
+            'email'      => $a->email,
+            'avatar'     => null,
+            'status'     => $a->status,
+            'signList'       => [],
+            'homeworkScores' => [],
+            'createTime' => $a->create_time,
         ];
     }
 
@@ -120,33 +175,59 @@ class UserManageService
     public function create(array $data): array
     {
         $isAdmin = ($data['role'] ?? 'student') === 'admin';
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        // 前端未传密码时回退默认密码
+        $password = $data['password'] ?? 'Pass@123';
 
-        if ($isAdmin) {
-            if (\App\Models\SysAdmin::where('admin_name', $data['username'])->exists()) {
-                throw new BusinessException('管理员账号已存在', ResponseCode::DATA_DUPLICATE);
-            }
-            $labId = auth('admin_api')->user()->lab_id ?? 'software';
-            $u = \App\Models\SysAdmin::create([
-                'admin_name' => $data['username'],
-                'password'   => Hash::make('Pass@123'),
-                'real_name'  => $data['realName'],
-                'phone'      => $data['phone'] ?? null,
-                'email'      => $data['email'] ?? null,
-                'department' => 1,
-                'lab_id'     => $labId,
-                'status'     => 1,
+        try {
+            return DB::transaction(function () use ($data, $isAdmin, $labId, $password) {
+                if ($isAdmin) {
+                    return $this->createAdmin($data, $labId, $password);
+                }
+                return $this->createStudent($data, $labId, $password);
+            });
+        } catch (QueryException $e) {
+            $this->logException('管理员创建账号数据库异常', $e, [
+                'username' => $data['username'] ?? '',
+                'role'     => $isAdmin ? 'admin' : 'student',
             ]);
-            $this->logBusiness('管理员创建管理员账号', ['admin_id' => $u->admin_id, 'admin_name' => $u->admin_name]);
-            return ['userId' => null, 'adminId' => $u->admin_id, 'username' => $u->admin_name, 'realName' => $u->real_name, 'role' => 'admin'];
+            throw new BusinessException(
+                '账号创建失败：账号/学号/手机号可能已存在或字段不合法',
+                ResponseCode::UNIQUE_CONFLICT
+            );
+        }
+    }
+
+    private function createAdmin(array $data, string $labId, string $password): array
+    {
+        if (SysAdmin::where('admin_name', $data['username'])->exists()) {
+            throw new BusinessException('管理员账号已存在', ResponseCode::DATA_DUPLICATE);
         }
 
+        $u = SysAdmin::create([
+            'admin_name' => $data['username'],
+            'password'   => Hash::make($password),
+            'real_name'  => $data['realName'],
+            'phone'      => $data['phone'] ?? null,
+            'email'      => $data['email'] ?? null,
+            'department' => $labId === 'ai' ? 2 : 1,
+            'lab_id'     => $labId,
+            'status'     => 1,
+        ]);
+
+        $this->logBusiness('管理员创建管理员账号', ['admin_id' => $u->admin_id, 'admin_name' => $u->admin_name]);
+        return ['userId' => null, 'adminId' => $u->admin_id, 'username' => $u->admin_name, 'realName' => $u->real_name, 'role' => 'admin'];
+    }
+
+    private function createStudent(array $data, string $labId, string $password): array
+    {
         if (SysUser::where('username', $data['username'])->exists()) {
             throw new BusinessException('学员账号已存在', ResponseCode::DATA_DUPLICATE);
         }
-        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+
         $u = SysUser::create([
             'username'   => $data['username'],
-            'password'   => Hash::make('Pass@123'),
+            'password'   => Hash::make($password),
             'real_name'  => $data['realName'],
             'phone'      => $data['phone'] ?? null,
             'email'      => $data['email'] ?? null,
@@ -208,11 +289,22 @@ class UserManageService
         }
     }
 
-    public function delete(int $userId): void
+    public function delete(int $userId, ?string $role = null): void
     {
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+
+        if ($role === 'admin') {
+            $a = SysAdmin::find($userId);
+            if (!$a) throw new BusinessException('管理员不存在', ResponseCode::DATA_NOT_FOUND);
+            if ($a->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+            $a->delete();
+            $this->logBusiness('管理员删除管理员账号', ['admin_id' => $userId]);
+            return;
+        }
+
         $u = SysUser::find($userId);
         if (!$u) throw new BusinessException('学员不存在', ResponseCode::DATA_NOT_FOUND);
-        if ($u->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+        if ($u->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $u->delete();
         $this->logBusiness('管理员删除学员', ['user_id' => $userId]);
     }

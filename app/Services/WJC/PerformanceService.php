@@ -2,6 +2,7 @@
 
 namespace App\Services\WJC;
 
+use App\Models\CheckinRecord;
 use App\Models\HomeworkSubmit;
 use App\Models\SignApplication;
 use App\Models\TrainHomework;
@@ -13,40 +14,47 @@ class PerformanceService
     public function list(int $page = 1, int $size = 10, ?int $courseId = null, ?string $keyword = null): array
     {
         $labId = auth('admin_api')->user()->lab_id ?? 'software';
-        $userIds = SignApplication::where('audit_status', 1)->where('lab_id', $labId)->pluck('user_id');
 
-        $query = TrainSign::with(['user', 'course'])
-            ->whereIn('user_id', $userIds)
-            ->where('status', 1)
-            ->orderBy('sign_time', 'desc');
+        // 以 SignApplication（培训名单/分班表）为主表，分班里有人即使作业/签到为 0 也显示
+        $query = SignApplication::where('audit_status', 1)
+            ->where('lab_id', $labId)
+            ->whereNotNull('group_name');
 
-        if ($courseId) $query->where('course_id', $courseId);
         if ($keyword) {
-            $query->whereHas('user', function ($q) use ($keyword) {
-                $q->where('real_name', 'like', "%{$keyword}%")
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
                   ->orWhere('student_id', 'like', "%{$keyword}%");
             });
         }
 
         $total = $query->count();
-        $signs = $query->forPage($page, $size)->get();
+        $apps  = $query->forPage($page, $size)->orderBy('audit_time', 'desc')->get();
 
-        $list = $signs->map(function ($sign) {
-            $homeworkIds = TrainHomework::where('course_id', $sign->course_id)->pluck('homework_id');
-            $homeworkCount = $homeworkIds->count();
-            $submits = HomeworkSubmit::where('user_id', $sign->user_id)->whereIn('homework_id', $homeworkIds)->get();
+        $list = $apps->map(function (SignApplication $app) use ($courseId) {
+            $user = SysUser::find($app->user_id);
+
+            $homeworkQuery = TrainHomework::query();
+            if ($courseId) $homeworkQuery->where('course_id', $courseId);
+            $homeworkIds = $homeworkQuery->pluck('homework_id');
+
+            $submits = HomeworkSubmit::where('user_id', $app->user_id)
+                ->whereIn('homework_id', $homeworkIds)
+                ->get();
             $submitCount = $submits->count();
             $avgScore = $submits->whereNotNull('score')->avg('score');
 
+            $checkinCount = CheckinRecord::where('user_id', $app->user_id)->count();
+
             return [
-                'userId'        => $sign->user_id,
-                'realName'      => $sign->user->real_name ?? '',
-                'studentId'     => $sign->user->student_id ?? '',
-                'courseName'    => $sign->course->course_name ?? '',
-                'homeworkCount' => $homeworkCount,
+                'userId'        => $app->user_id,
+                'realName'      => $user->real_name ?? $app->name,
+                'studentId'     => $app->student_id,
+                'className'     => $app->group_name ?? '',
+                'homeworkCount' => $homeworkIds->count(),
                 'submitCount'   => $submitCount,
                 'avgScore'      => $avgScore ? round($avgScore, 1) : null,
-                'submitRate'    => $homeworkCount > 0 ? round($submitCount / $homeworkCount * 100) . '%' : 'N/A',
+                'submitRate'    => $homeworkIds->count() > 0 ? round($submitCount / $homeworkIds->count() * 100) . '%' : 'N/A',
+                'checkinCount'  => $checkinCount,
             ];
         });
 

@@ -23,9 +23,9 @@ class UserManageController extends Controller
         ));
     }
 
-    public function detail(int $userId): JsonResponse
+    public function detail(Request $r, int $userId): JsonResponse
     {
-        return Result::success('成功', $this->service->detail($userId));
+        return Result::success('成功', $this->service->detail($userId, $r->input('role')));
     }
 
     public function status(UserStatusRequest $r, int $userId): JsonResponse
@@ -43,7 +43,7 @@ class UserManageController extends Controller
 
     public function delete(Request $r): JsonResponse
     {
-        $this->service->delete((int) $r->input('userId'));
+        $this->service->delete((int) $r->input('userId'), $r->input('role'));
         return Result::success('删除成功');
     }
 }
