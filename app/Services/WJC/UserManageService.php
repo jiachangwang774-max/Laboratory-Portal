@@ -8,6 +8,7 @@ use App\Models\SysUser;
 use App\Models\TrainSign;
 use App\Models\HomeworkSubmit;
 use App\Models\SignApplication;
+use App\Models\CheckinRecord;
 use App\Helpers\PhoneHelper;
 use App\Models\SysAdmin;
 use App\Traits\LogTrait;
@@ -305,7 +306,23 @@ class UserManageService
         $u = SysUser::find($userId);
         if (!$u) throw new BusinessException('学员不存在', ResponseCode::DATA_NOT_FOUND);
         if ($u->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
-        $u->delete();
+
+        DB::transaction(function () use ($u) {
+            // 级联删除关联业务数据，避免其它页面残留该学员
+            TrainSign::where('user_id', $u->user_id)->delete();
+            HomeworkSubmit::where('user_id', $u->user_id)->delete();
+            CheckinRecord::where('user_id', $u->user_id)->delete();
+
+            // 培训名单（sign_application）同时按 user_id 与 student_id 清理
+            $appQuery = SignApplication::where('user_id', $u->user_id);
+            if (!empty($u->student_id)) {
+                $appQuery->orWhere('student_id', $u->student_id);
+            }
+            $appQuery->delete();
+
+            $u->delete();
+        });
+
         $this->logBusiness('管理员删除学员', ['user_id' => $userId]);
     }
 }

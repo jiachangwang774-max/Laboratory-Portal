@@ -173,7 +173,7 @@ Route::prefix('admin/homework')->middleware('auth:admin_api')->group(function ()
 Route::prefix('admin/homework/submit')->middleware('auth:admin_api')->group(function () {
     Route::get('/list',               [HomeworkController::class, 'submitList']);//提交列表
     Route::get('/detail/{submitId}',  [HomeworkController::class, 'submitDetail'])->whereNumber('submitId');//详情
-    Route::put('/score/{submitId}',   [HomeworkController::class, 'score'])->whereNumber('submitId');//评分
+    Route::match(['post', 'put'], '/score/{submitId}',   [HomeworkController::class, 'score'])->whereNumber('submitId');//评分
     Route::delete('/delete', [HomeworkController::class, 'deleteSubmit']);//删除
 });
 

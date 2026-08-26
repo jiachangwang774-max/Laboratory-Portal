@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(rm \"d:\\\\git-base\\\\labor\\\\Laboratory-Portal\\\\config\\\\sanctum.php\")"
+      "Bash(rm \"d:\\\\git-base\\\\labor\\\\Laboratory-Portal\\\\config\\\\sanctum.php\")",
+      "Bash(php -l app/Services/WJC/UserManageService.php)",
+      "Bash(mysql -h 47.109.1.10 -P 3306 -u Laboratory-Portal -pYYsMmDh5mDnLHZSc laboratory-portal --default-character-set=utf8mb4 -e ' *)"
     ],
     "additionalDirectories": [
       "d:\\git-base\\labor\\Laboratory-Portal\\config"

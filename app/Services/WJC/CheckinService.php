@@ -128,19 +128,39 @@ class CheckinService
     }
 
     /**
-     * 管理员手动签到
+     * 管理员手动签到（按学号匹配学员，与批量签到同一套逻辑）
      */
-    public function manualCheckin(int $checkinId, int $userId): array
+    public function manualCheckin(int $checkinId, string $studentId): array
     {
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+
         $c = CourseCheckin::find($checkinId);
-        if (!$c || $c->status !== 1) throw new BusinessException('签到已结束', ResponseCode::BUSINESS_ERROR);
+        if (!$c) throw new BusinessException('签到不存在', ResponseCode::DATA_NOT_FOUND);
+        if ($c->status !== 1) throw new BusinessException('签到已结束', ResponseCode::BUSINESS_ERROR);
+        if ($c->end_time && now()->gt($c->end_time)) throw new BusinessException('签到已超时', ResponseCode::BUSINESS_ERROR);
+        if ($c->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+
+        $studentId = trim($studentId);
+        if ($studentId === '') throw new BusinessException('学号不能为空', ResponseCode::PARAM_ERROR);
+
+        // 学号 → 学员（与批量签到一致）
+        $user = SysUser::where('student_id', $studentId)->first();
+        if (!$user) throw new BusinessException('学号不存在', ResponseCode::DATA_NOT_FOUND);
+
+        $enrolled = TrainSign::where('user_id', $user->user_id)
+            ->where('course_id', $c->course_id)
+            ->where('status', 1)
+            ->exists();
+        if (!$enrolled) throw new BusinessException('该学员未报名此课程', ResponseCode::BUSINESS_ERROR);
 
         CheckinRecord::firstOrCreate(
-            ['checkin_id' => $checkinId, 'user_id' => $userId],
-            ['checkin_method' => 'manual', 'checkin_time' => now()]
+            ['checkin_id' => $checkinId, 'user_id' => $user->user_id],
+            ['checkin_method' => 'manual', 'checkin_time' => now(), 'lab_id' => $labId]
         );
 
-        return ['checkinId' => $checkinId, 'userId' => $userId, 'statusText' => '手动签到成功'];
+        $this->logBusiness('管理员手动签到', ['checkin_id' => $checkinId, 'user_id' => $user->user_id, 'student_id' => $studentId]);
+
+        return ['checkinId' => $checkinId, 'userId' => $user->user_id, 'studentId' => $studentId, 'statusText' => '手动签到成功'];
     }
 
     /**

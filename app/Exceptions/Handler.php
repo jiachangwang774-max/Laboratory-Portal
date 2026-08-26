@@ -16,6 +16,7 @@ use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 
 class Handler extends \Illuminate\Foundation\Exceptions\Handler
 {
@@ -102,6 +103,15 @@ class Handler extends \Illuminate\Foundation\Exceptions\Handler
             return Result::error(
                 ResponseCode::DATA_NOT_FOUND,
                 '接口不存在'
+            );
+        }
+
+        // 请求方法不支持
+        if ($e instanceof MethodNotAllowedHttpException) {
+            $allowed = $e->getHeaders()['Allow'] ?? null;
+            return Result::error(
+                ResponseCode::METHOD_NOT_ALLOWED,
+                $allowed ? "请求方式不支持，允许: {$allowed}" : null
             );
         }
 

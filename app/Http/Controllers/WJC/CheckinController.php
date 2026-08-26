@@ -73,8 +73,11 @@ class CheckinController extends Controller
      */
     public function manual(Request $r): JsonResponse
     {
+        // 前端以学号标识学员（studentId / studentNo），据此匹配真实 userId
+        $studentId = (string) ($r->input('studentId') ?: $r->input('studentNo') ?: $r->input('student_id'));
+
         return Result::success('手动签到成功', $this->service->manualCheckin(
-            (int) $r->input('checkinId'), (int) $r->input('userId')
+            (int) $r->input('checkinId'), $studentId
         ));
     }
 

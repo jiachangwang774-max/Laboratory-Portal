@@ -75,6 +75,11 @@ enum ResponseCode: int
     case VERIFY_CODE_ERROR = 40002;
 
     /**
+     * 请求方式不支持
+     */
+    case METHOD_NOT_ALLOWED = 40003;
+
+    /**
      * 重复提交
      */
     case DUPLICATE_SUBMIT = 40009;
@@ -130,9 +135,10 @@ enum ResponseCode: int
             self::USER_ALREADY_EXISTS => 409,
 
             // 4xxxx 业务异常
-            self::BUSINESS_ERROR    => 400,
-            self::VERIFY_CODE_ERROR => 400,
-            self::DUPLICATE_SUBMIT  => 429,
+            self::BUSINESS_ERROR      => 400,
+            self::VERIFY_CODE_ERROR   => 400,
+            self::METHOD_NOT_ALLOWED  => 405,
+            self::DUPLICATE_SUBMIT    => 429,
 
             // 5xxxx 第三方服务异常
             self::THIRD_PARTY_ERROR => 502,
@@ -165,9 +171,10 @@ enum ResponseCode: int
             self::DATA_DUPLICATE      => '数据重复',
             self::USER_ALREADY_EXISTS => '用户已存在',
 
-            self::BUSINESS_ERROR    => '业务处理失败',
-            self::VERIFY_CODE_ERROR => '验证码错误或已过期',
-            self::DUPLICATE_SUBMIT  => '请勿重复提交',
+            self::BUSINESS_ERROR      => '业务处理失败',
+            self::VERIFY_CODE_ERROR   => '验证码错误或已过期',
+            self::METHOD_NOT_ALLOWED  => '请求方式不支持',
+            self::DUPLICATE_SUBMIT    => '请勿重复提交',
 
             self::THIRD_PARTY_ERROR => '第三方服务异常',
             self::SMS_SEND_FAILED   => '短信发送失败',
