@@ -251,14 +251,9 @@ class UserManageService
 
     private function syncTrainRoster(SysUser $u, array $data, string $labId): void
     {
-        $groups = ['一班', '二班', '三班'];
-        $last = SignApplication::where('audit_status', 1)
-            ->where('lab_id', $labId)
-            ->whereNotNull('group_name')
-            ->orderBy('audit_time', 'desc')
-            ->value('group_name');
-        $idx = $last ? (array_search($last, $groups) + 1) % 3 : 0;
-        $groupName = $groups[$idx];
+        // 分班（group_name）不由后端自动分配，统一由管理员在培训名单里导表（importClass）指定
+        // 学校班级：前端可能发 className / class_name / grade 三种字段名，取其一写入 sign_application.class_name
+        $className = $data['className'] ?? $data['class_name'] ?? $data['grade'] ?? null;
 
         $app = SignApplication::where('student_id', $u->student_id)->first();
 
@@ -270,9 +265,10 @@ class UserManageService
                 'department'   => $labId === 'ai' ? 2 : 1,
                 'college'      => $u->college,
                 'major'        => $u->major,
+                'class_name'   => $className,
+                'phone'        => $u->phone,
                 'status'       => 1,
                 'audit_status' => 1,
-                'group_name'   => $groupName,
                 'lab_id'       => $labId,
                 'submit_time'  => now(),
                 'audit_time'   => now(),
@@ -282,9 +278,10 @@ class UserManageService
             $app->user_id      = $u->user_id;
             $app->college      = $u->college ?: $app->college;
             $app->major        = $u->major ?: $app->major;
+            $app->class_name   = $className ?: $app->class_name;
+            $app->phone        = $u->phone ?: $app->phone;
             $app->status       = 1;
             $app->audit_status = 1;
-            $app->group_name   = $app->group_name ?: $groupName;
             $app->lab_id       = $labId;
             $app->save();
         }

@@ -20,6 +20,8 @@ class UserCreateRequest extends FormRequest
             'phone'     => 'nullable|string|max:11',
             'email'     => 'nullable|email|max:50',
             'grade'     => 'nullable|string|max:20',
+            'className'  => 'nullable|string|max:100',
+            'class_name' => 'nullable|string|max:100',
             'major'     => 'nullable|string|max:50',
             'college'   => 'nullable|string|max:50',
             'studentId' => [Rule::requiredIf($role === 'student'), 'string', 'max:20'],

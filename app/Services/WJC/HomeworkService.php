@@ -107,8 +107,8 @@ class HomeworkService
     public function submitList(int $page = 1, int $size = 10, ?int $homeworkId = null, ?int $courseId = null, ?string $groupName = null): array
     {
         $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        // 花名册：已通过审核且已分班的学员（实验室归属统一由作业维度判定，见下方 whereHas）
         $rosterQuery = SignApplication::where('audit_status', 1)
-            ->where('lab_id', $labId)
             ->whereNotNull('group_name');
 
         // 传 groupName 时按班级进一步过滤，不传时取所有已分班学员，无分班记录的提交一律不出现
@@ -116,7 +116,9 @@ class HomeworkService
             ? (clone $rosterQuery)->where('group_name', $groupName)->pluck('user_id')
             : $rosterQuery->pluck('user_id');
 
+        // 按作业所属实验室严格分离，两个实验室的提交互不可见
         $query = HomeworkSubmit::with(['user', 'homework.course'])
+            ->whereHas('homework', fn($q) => $q->where('lab_id', $labId))
             ->whereIn('user_id', $filterIds)
             ->orderBy('submit_time', 'desc');
         if ($homeworkId) $query->where('homework_id', $homeworkId);
@@ -150,6 +152,8 @@ class HomeworkService
     {
         $s = HomeworkSubmit::with(['user', 'homework.course'])->find($submitId);
         if (!$s) throw new BusinessException('提交记录不存在', ResponseCode::DATA_NOT_FOUND);
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        if ($s->homework?->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
         $app = SignApplication::where('user_id', $s->user_id)->where('audit_status', 1)->first();
         return [
@@ -172,18 +176,20 @@ class HomeworkService
 
     public function deleteSubmit(int $submitId): void
     {
-        $s = HomeworkSubmit::find($submitId);
+        $s = HomeworkSubmit::with('homework')->find($submitId);
         if (!$s) throw new BusinessException('提交记录不存在', ResponseCode::DATA_NOT_FOUND);
-        if ($s->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        if ($s->homework?->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
         $s->delete();
         $this->logBusiness('管理员删除作业提交', ['submit_id' => $submitId]);
     }
 
     public function score(int $submitId, int $score, ?string $remark): array
     {
-        $s = HomeworkSubmit::find($submitId);
+        $s = HomeworkSubmit::with('homework')->find($submitId);
         if (!$s) throw new BusinessException('提交记录不存在', ResponseCode::DATA_NOT_FOUND);
-        if ($s->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
+        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        if ($s->homework?->lab_id !== $labId) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
         $s->score = $score;
         $s->remark = $remark;
