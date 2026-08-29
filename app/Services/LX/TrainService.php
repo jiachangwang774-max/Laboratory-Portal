@@ -384,12 +384,13 @@ class TrainService
             throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
         }
 
-        // 若作业有结构化题目，校验提交内容为合法 JSON
-        if ($homework->questions && $content) {
-            $decoded = json_decode($content, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new BusinessException('作答数据格式错误', ResponseCode::PARAM_ERROR);
-            }
+        // 若作业有结构化题目，校验并规范化作答内容为 keyed-object 形式
+        $normalizedContent = $content;
+        if ($homework->questions) {
+            $normalizedContent = json_encode(
+                $this->validateHomeworkAnswers($homework->questions, $content),
+                JSON_UNESCAPED_UNICODE
+            );
         }
 
         // 校验作业所属课程是否属于当前用户所在实验室
@@ -447,7 +448,7 @@ class TrainService
         $submit = HomeworkSubmit::create([
             'user_id'        => $userId,
             'homework_id'    => $homeworkId,
-            'submit_content' => $content,
+            'submit_content' => $normalizedContent,
             'submit_file'    => $filePath,
             'submit_time'    => now(),
         ]);
@@ -662,6 +663,125 @@ class TrainService
             }
             return $safe;
         }, $questions);
+    }
+
+    /**
+     * 校验学生作答内容是否符合作业题目结构，并规范化返回
+     *
+     * content 约定为 JSON 对象，键为题目 id：
+     *   - choice（单选/多选）：值为逗号分隔的大写字母下标，如 "A"、"A,C"
+     *   - judge（判断）：值为 对/错（或 true/false、1/0）
+     *   - essay（解答）：值为自由文本字符串
+     *
+     * @param array       $questions 作业题目列表
+     * @param string|null $content   学生提交的 JSON 字符串
+     * @return array 规范化后的作答，键为题目 id
+     */
+    private function validateHomeworkAnswers(array $questions, ?string $content): array
+    {
+        $answers = json_decode($content ?? '', true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($answers)) {
+            throw new BusinessException('作答数据格式错误', ResponseCode::PARAM_ERROR);
+        }
+
+        $normalized = [];
+        foreach ($questions as $q) {
+            $id    = $q['id'] ?? '';
+            $type  = $q['type'] ?? '';
+            $title = $q['title'] ?? '';
+            if ($id === '') {
+                continue;
+            }
+
+            $label = $title !== '' ? $title : ('题目#' . $id);
+            $ans   = $answers[$id] ?? null;
+
+            if ($ans === null || $ans === '') {
+                throw new BusinessException('请完成题目「' . $label . '」的作答', ResponseCode::PARAM_ERROR);
+            }
+
+            if ($type === 'choice') {
+                $correctCount = $this->countAnswerItems($q['answer'] ?? null);
+                $normalized[$id] = $this->normalizeChoiceAnswer($ans, $label, $q['options'] ?? [], $correctCount);
+            } elseif ($type === 'judge') {
+                if (!is_string($ans) || !in_array($ans, ['对', '错', 'true', 'false', '1', '0'], true)) {
+                    throw new BusinessException('题目「' . $label . '」答案格式错误', ResponseCode::PARAM_ERROR);
+                }
+                $normalized[$id] = $ans;
+            } else {
+                // essay 及未知类型：自由文本
+                if (!is_string($ans)) {
+                    throw new BusinessException('题目「' . $label . '」答案格式错误', ResponseCode::PARAM_ERROR);
+                }
+                $normalized[$id] = $ans;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * 规范化选择题答案：逗号分隔的大写字母，去空格、去重，每个字母必须是合法选项下标（A 起）
+     * 并按正确答案数量校验单选/多选一致性。
+     *
+     * @param mixed  $ans
+     * @param string $label
+     * @param array  $options
+     * @param int    $correctCount 正确答案数量（1=单选，>1=多选）
+     * @return string 规范化后的答案，如 "A,C"
+     */
+    private function normalizeChoiceAnswer($ans, string $label, array $options, int $correctCount): string
+    {
+        if (!is_string($ans)) {
+            throw new BusinessException('题目「' . $label . '」答案格式错误', ResponseCode::PARAM_ERROR);
+        }
+
+        $optionCount = count($options);
+        if ($optionCount <= 0) {
+            throw new BusinessException('题目「' . $label . '」选项配置错误', ResponseCode::PARAM_ERROR);
+        }
+
+        $result = [];
+        foreach (explode(',', $ans) as $part) {
+            $part = strtoupper(trim($part));
+            if ($part === '' || strlen($part) !== 1) {
+                throw new BusinessException('题目「' . $label . '」答案选项不合法', ResponseCode::PARAM_ERROR);
+            }
+            $idx = ord($part) - ord('A');
+            if ($idx < 0 || $idx >= $optionCount) {
+                throw new BusinessException('题目「' . $label . '」答案选项不合法', ResponseCode::PARAM_ERROR);
+            }
+            if (in_array($part, $result, true)) {
+                throw new BusinessException('题目「' . $label . '」答案选项重复', ResponseCode::PARAM_ERROR);
+            }
+            $result[] = $part;
+        }
+
+        // 单选/多选一致性校验：按正确答案数量判定题型
+        $studentCount = count($result);
+        if ($correctCount === 1 && $studentCount !== 1) {
+            throw new BusinessException('题目「' . $label . '」为单选题，只能选择一个选项', ResponseCode::PARAM_ERROR);
+        }
+        if ($correctCount > 1 && $studentCount < 2) {
+            throw new BusinessException('题目「' . $label . '」为多选题，请选择多个选项', ResponseCode::PARAM_ERROR);
+        }
+
+        return implode(',', $result);
+    }
+
+    /**
+     * 统计正确答案的选项数量（按逗号分隔，用于判断单选/多选）
+     *
+     * @param mixed $answer
+     * @return int
+     */
+    private function countAnswerItems($answer): int
+    {
+        if (!is_string($answer) || trim($answer) === '') {
+            return 0;
+        }
+        $items = array_filter(explode(',', $answer), fn($v) => trim($v) !== '');
+        return count($items);
     }
 
 }
