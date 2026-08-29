@@ -15,7 +15,7 @@ class HomeworkCreateRequest extends FormRequest
             'homeworkTitle'   => 'required|string|max:100',
             'homeworkContent' => 'nullable|string',
             'questions'       => 'nullable|array',
-            'questions.*.id'   => 'required|string|max:50',
+            'questions.*.id'   => 'required|string|max:50|distinct',
             'questions.*.type' => 'required|in:choice,judge,essay',
             'questions.*.title'=> 'required|string|max:500',
             'questions.*.options' => 'required_if:questions.*.type,choice|array|min:2',
@@ -32,6 +32,7 @@ class HomeworkCreateRequest extends FormRequest
             'courseId.required'        => '课程ID不能为空',
             'courseId.exists'          => '课程不存在',
             'homeworkTitle.required'   => '作业标题不能为空',
+            'questions.*.id.distinct'  => '题目ID不能重复',
         ];
     }
 }

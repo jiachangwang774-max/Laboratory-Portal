@@ -661,6 +661,10 @@ class TrainService
             if (isset($q['score'])) {
                 $safe['score'] = $q['score'];
             }
+            // 选择题补「是否多选」标志（按正确答案逗号项数判定，1=单选，>1=多选），不返回 answer 本身，避免泄露正确答案
+            if (($q['type'] ?? '') === 'choice') {
+                $safe['multiple'] = $this->countAnswerItems($q['answer'] ?? null) > 1;
+            }
             return $safe;
         }, $questions);
     }
@@ -780,8 +784,10 @@ class TrainService
         if (!is_string($answer) || trim($answer) === '') {
             return 0;
         }
-        $items = array_filter(explode(',', $answer), fn($v) => trim($v) !== '');
-        return count($items);
+        $items = array_map('trim', explode(',', $answer));
+        // 管理员端选择题答案格式为「正确,A,B,C」，「正确/错误」是标记而非选项，去掉后只统计选项字母
+        $letters = array_values(array_filter($items, fn($v) => $v !== '' && !in_array($v, ['正确', '错误'], true)));
+        return count($letters);
     }
 
 }
