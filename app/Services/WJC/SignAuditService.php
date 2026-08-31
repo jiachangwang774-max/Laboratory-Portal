@@ -20,7 +20,7 @@ class SignAuditService
     /**
      * 报名申请分页列表（仅已提交 status=1）
      */
-    public function list(int $page = 1, int $size = 10, ?int $auditStatus = null): array
+    public function list(int $page = 1, int $size = 10, ?int $auditStatus = null, ?string $college = null, ?string $major = null): array
     {
         $labId = auth('admin_api')->user()->lab_id ?? 'software';
         $query = SignApplication::where('status', 1)
@@ -29,6 +29,12 @@ class SignAuditService
 
         if ($auditStatus !== null) {
             $query->where('audit_status', $auditStatus);
+        }
+        if ($college) {
+            $query->where('college', $college);
+        }
+        if ($major) {
+            $query->where('major', $major);
         }
 
         $total = $query->count();
