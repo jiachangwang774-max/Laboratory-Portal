@@ -11,6 +11,7 @@ class HomeworkUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'courseId'        => 'nullable|integer|exists:train_course,course_id',
             'homeworkTitle'   => 'nullable|string|max:100',
             'homeworkContent' => 'nullable|string',
             'questions'       => 'nullable|array',
