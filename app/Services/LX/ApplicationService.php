@@ -64,7 +64,8 @@ class ApplicationService
         $studentId = $data['student_id'];
         $application = SignApplication::where('student_id', $studentId)->first();
 
-        if ($application && $application->status === 1) {
+        // 已提交且未被驳回的不可重复提交；被驳回(audit_status=2)的允许重新提交
+        if ($application && $application->status === 1 && $application->audit_status !== 2) {
             throw new BusinessException('报名已提交，请勿重复操作', ResponseCode::DUPLICATE_SUBMIT);
         }
 
@@ -72,12 +73,16 @@ class ApplicationService
             'name'              => $data['name'],
             'student_id'        => $studentId,
             'department'        => $data['department'],
+            'lab_id'            => $data['department'] == 2 ? 'ai' : 'software',
             'college'           => $data['college'],
             'major'             => $data['major'],
             'class_name'        => $data['class_name'],
             'phone'             => $data['phone'],
             'self_introduction' => $data['self_introduction'],
             'status'            => 1,
+            'audit_status'      => 0,
+            'audit_remark'      => null,
+            'audit_time'        => null,
             'submit_time'       => now(),
         ];
 
