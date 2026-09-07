@@ -178,6 +178,7 @@ class SignAuditService
                     'student_id' => $studentId,
                     'college'    => $app->college,
                     'major'      => $app->major,
+                    'phone'      => $app->phone,
                     'lab_id'     => $app->lab_id ?: 'software',
                     'status'     => 1,
                 ]);
@@ -185,6 +186,7 @@ class SignAuditService
                 $user->real_name = $app->name ?: $user->real_name;
                 $user->college   = $app->college ?: $user->college;
                 $user->major     = $app->major ?: $user->major;
+                $user->phone     = $app->phone ?: $user->phone;
                 $user->lab_id    = $app->lab_id ?: $user->lab_id;
                 $user->status    = 1;
                 $user->save();
