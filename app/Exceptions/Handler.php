@@ -9,6 +9,7 @@ use App\Enums\ResponseCode;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
@@ -112,6 +113,14 @@ class Handler extends \Illuminate\Foundation\Exceptions\Handler
             return Result::error(
                 ResponseCode::METHOD_NOT_ALLOWED,
                 $allowed ? "请求方式不支持，允许: {$allowed}" : null
+            );
+        }
+
+        // 请求过于频繁（限流）
+        if ($e instanceof ThrottleRequestsException) {
+            return Result::error(
+                ResponseCode::RATE_LIMITED,
+                '请求过于频繁，请稍后再试'
             );
         }
 

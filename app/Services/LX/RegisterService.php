@@ -43,15 +43,8 @@ class RegisterService
             'create_time' => now(),
         ]);
 
-        try {
-            Mail::to($email)->send(new VerificationCodeMail($code, $type->mailTitle()));
-        } catch (\Throwable $e) {
-            $this->logException('发送验证码邮件失败', $e, [
-                'email' => $email,
-                'type'  => $type->label(),
-            ]);
-            throw new BusinessException('验证码发送失败，请稍后再试', ResponseCode::THIRD_PARTY_ERROR);
-        }
+        // 异步队列发送：请求立即返回，邮件由后台 worker 处理，避免高并发时被 SMTP 拖慢
+        Mail::to($email)->queue(new VerificationCodeMail($code, $type->mailTitle()));
 
         $this->logBusiness('发送验证码', [
             'email' => $email,

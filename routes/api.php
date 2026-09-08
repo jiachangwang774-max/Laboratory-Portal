@@ -22,14 +22,14 @@ use App\Http\Controllers\LX\ApplicationController;
 
 // 公开路由
 Route::prefix('user/auth')->group(function () {
-    Route::post('/login',         [UserAuthController::class, 'login']);//登录
+    Route::post('/login',         [UserAuthController::class, 'login'])->middleware('throttle:login');//登录
 });
 
 // 统一发送验证码（注册 / 重置密码 / 注销账号）
-Route::post('user/verify_code/send', [UserRegisterController::class, 'sendCode']);
+Route::post('user/verify_code/send', [UserRegisterController::class, 'sendCode'])->middleware('throttle:verify_code');
 
 Route::prefix('user/register')->group(function () {
-    Route::post('/', [UserRegisterController::class, 'register']);//用户注册
+    Route::post('/', [UserRegisterController::class, 'register'])->middleware('throttle:register');//用户注册
 });
 
 // 需认证路由 - 注销账号
@@ -92,6 +92,8 @@ Route::prefix('user/application')->group(function () {
 
     // 提交
     Route::post('/submit', [ApplicationController::class, 'submit']);//提交报名
+    // 名额查询
+    Route::get('/quota',   [ApplicationController::class, 'quota']);//查询报名名额
 });
 
 // 需认证：查看已提交详情及审核结果
@@ -105,8 +107,8 @@ Route::prefix('user/application')->middleware('auth:user_api')->group(function (
 
 // 4.1 管理员认证 — 公开路由
 Route::prefix('admin/auth')->group(function () {
-    Route::post('/login',     [AdminAuthController::class, 'login']);//管理员登录
-    Route::post('/send_code', [AdminAuthController::class, 'sendCode']);//发送验证码（找回密码）
+    Route::post('/login',     [AdminAuthController::class, 'login'])->middleware('throttle:login');//管理员登录
+    Route::post('/send_code', [AdminAuthController::class, 'sendCode'])->middleware('throttle:verify_code');//发送验证码（找回密码）
     Route::post('/reset_pwd', [AdminAuthController::class, 'resetPwd']);//重置密码
 });
 

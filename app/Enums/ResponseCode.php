@@ -85,6 +85,16 @@ enum ResponseCode: int
     case DUPLICATE_SUBMIT = 40009;
 
     /**
+     * 报名人数已满
+     */
+    case SIGN_QUOTA_FULL = 40010;
+
+    /**
+     * 请求过于频繁
+     */
+    case RATE_LIMITED = 40011;
+
+    /**
      * 第三方接口异常
      */
     case THIRD_PARTY_ERROR = 50001;
@@ -139,6 +149,8 @@ enum ResponseCode: int
             self::VERIFY_CODE_ERROR   => 400,
             self::METHOD_NOT_ALLOWED  => 405,
             self::DUPLICATE_SUBMIT    => 429,
+            self::SIGN_QUOTA_FULL     => 409,
+            self::RATE_LIMITED        => 429,
 
             // 5xxxx 第三方服务异常
             self::THIRD_PARTY_ERROR => 502,
@@ -175,6 +187,8 @@ enum ResponseCode: int
             self::VERIFY_CODE_ERROR   => '验证码错误或已过期',
             self::METHOD_NOT_ALLOWED  => '请求方式不支持',
             self::DUPLICATE_SUBMIT    => '请勿重复提交',
+            self::SIGN_QUOTA_FULL     => '报名人数已满',
+            self::RATE_LIMITED        => '请求过于频繁，请稍后再试',
 
             self::THIRD_PARTY_ERROR => '第三方服务异常',
             self::SMS_SEND_FAILED   => '短信发送失败',

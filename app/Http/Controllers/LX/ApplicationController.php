@@ -62,4 +62,14 @@ class ApplicationController extends Controller
         $result = $this->applicationService->getDetail($studentId);
         return Result::success('获取成功', $result);
     }
+
+    /**
+     * 查询报名名额（公开，供前端展示剩余名额）
+     * GET /api/v1/user/application/quota
+     */
+    public function quota(): JsonResponse
+    {
+        $result = $this->applicationService->getQuota();
+        return Result::success('获取成功', $result);
+    }
 }

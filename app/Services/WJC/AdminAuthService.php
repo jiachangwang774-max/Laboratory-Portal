@@ -127,7 +127,7 @@ class AdminAuthService
             'create_time' => now(),
         ]);
 
-        Mail::to($admin->email)->send(new VerificationCodeMail($code, '管理员重置密码'));
+        Mail::to($admin->email)->queue(new VerificationCodeMail($code, '管理员重置密码'));
 
         $this->logBusiness('管理员找回密码验证码已发送', [
             'admin_id' => $admin->admin_id,
