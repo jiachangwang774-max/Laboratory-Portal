@@ -31,7 +31,9 @@ class SignAuditController extends Controller
         $data = $this->signService->list(
             (int) $request->input('page', 1),
             (int) $request->input('size', 10),
-            $request->input('auditStatus') !== null ? (int) $request->input('auditStatus') : null
+            $request->input('auditStatus') !== null ? (int) $request->input('auditStatus') : null,
+            $request->input('college') ?: null,
+            $request->input('major') ?: null
         );
         return Result::success('成功', $data);
     }

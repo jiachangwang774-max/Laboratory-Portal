@@ -17,6 +17,8 @@ class SignListRequest extends FormRequest
             'page'        => 'nullable|integer|min:1',
             'size'        => 'nullable|integer|min:1|max:100',
             'auditStatus' => 'nullable|integer|in:0,1,2',
+            'college'     => 'nullable|string|max:100',
+            'major'       => 'nullable|string|max:100',
         ];
     }
 

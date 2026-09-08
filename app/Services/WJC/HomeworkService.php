@@ -38,6 +38,7 @@ class HomeworkService
         if (!$hw) throw new BusinessException('作业不存在', ResponseCode::DATA_NOT_FOUND);
         if ($hw->lab_id !== (auth('admin_api')->user()->lab_id ?? 'software')) throw new BusinessException('无权操作', ResponseCode::FORBIDDEN);
 
+        if (isset($data['courseId'])) $hw->course_id = $data['courseId'];
         if (isset($data['homeworkTitle'])) $hw->homework_title = $data['homeworkTitle'];
         if (isset($data['homeworkContent'])) $hw->homework_content = $data['homeworkContent'];
         if (array_key_exists('questions', $data)) $hw->questions = $data['questions'];
