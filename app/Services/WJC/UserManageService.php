@@ -2,6 +2,7 @@
 
 namespace App\Services\WJC;
 
+use App\Enums\LabDepartment;
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\SysUser;
@@ -176,7 +177,11 @@ class UserManageService
     public function create(array $data): array
     {
         $isAdmin = ($data['role'] ?? 'student') === 'admin';
-        $labId = auth('admin_api')->user()->lab_id ?? 'software';
+        $lab = LabDepartment::tryFrom((string) ($data['labId'] ?? auth('admin_api')->user()->lab_id ?? 'software'));
+        if (!$lab) {
+            throw new BusinessException('部门无效', ResponseCode::PARAM_ERROR);
+        }
+        $labId = $lab->value;
         // 前端未传密码时回退默认密码
         $password = $data['password'] ?? 'Pass@123';
 
@@ -211,7 +216,7 @@ class UserManageService
             'real_name'  => $data['realName'],
             'phone'      => $data['phone'] ?? null,
             'email'      => $data['email'] ?? null,
-            'department' => $labId === 'ai' ? 2 : 1,
+            'department' => LabDepartment::from($labId)->departmentId(),
             'lab_id'     => $labId,
             'status'     => 1,
         ]);
@@ -262,7 +267,7 @@ class UserManageService
                 'student_id'   => $u->student_id,
                 'name'         => $u->real_name,
                 'user_id'      => $u->user_id,
-                'department'   => $labId === 'ai' ? 2 : 1,
+                'department'   => LabDepartment::from($labId)->departmentId(),
                 'college'      => $u->college,
                 'major'        => $u->major,
                 'class_name'   => $className,
