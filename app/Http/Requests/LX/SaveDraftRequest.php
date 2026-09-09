@@ -16,7 +16,7 @@ class SaveDraftRequest extends FormRequest
         return [
             'student_id'        => 'required|string|max:50',
             'name'              => 'nullable|string|max:50',
-            'department'        => 'nullable|integer|in:1,2',
+            'department'        => 'nullable|integer|in:1,2,3,4',
             'college'           => 'nullable|string|max:100',
             'major'             => 'nullable|string|max:100',
             'class_name'        => 'nullable|string|max:100',

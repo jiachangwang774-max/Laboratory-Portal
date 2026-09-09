@@ -16,7 +16,7 @@ class SubmitApplicationRequest extends FormRequest
         return [
             'name'              => 'required|string|max:50',
             'student_id'        => 'required|string|max:50',
-            'department'        => 'required|integer|in:1,2',
+            'department'        => 'required|integer|in:1,2,3,4',
             'college'           => 'required|string|max:100',
             'major'             => 'required|string|max:100',
             'class_name'        => 'required|string|max:100',

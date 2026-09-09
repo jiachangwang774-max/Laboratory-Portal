@@ -9,6 +9,7 @@ use App\Models\SignApplication;
 use App\Models\SysUser;
 use App\Models\TrainCourse;
 use App\Models\TrainSign;
+use App\Support\Department;
 use App\Traits\LogTrait;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -76,7 +77,7 @@ class SignAuditService
             'name'             => $app->name,
             'studentId'        => $app->student_id,
             'department'       => $app->department,
-            'departmentText'   => LabDepartment::fromDepartmentId($app->department)?->label() ?? '',
+            'departmentText'   => Department::name((int) $app->department),
             'college'          => $app->college,
             'major'            => $app->major,
             'className'        => $app->class_name,
