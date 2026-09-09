@@ -15,7 +15,7 @@ class SignApplication extends Model
         'user_id',           // 用户ID（可选，未登录也可报名）
         'name',              // 姓名
         'student_id',        // 学号
-        'department',        // 报名部门 1软件开发实验室 2人工智能实验室
+        'department',        // 报名部门 1软件开发实验室 2人工智能算法实验室 3协研发展部 4综合运营部
         'college',           // 学院
         'major',             // 专业
         'class_name',        // 班级

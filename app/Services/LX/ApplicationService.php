@@ -6,6 +6,7 @@ use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\SignApplication;
 use App\Models\SignQuota;
+use App\Support\Department;
 use App\Traits\LogTrait;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -80,7 +81,7 @@ class ApplicationService
             'name'              => $data['name'],
             'student_id'        => $studentId,
             'department'        => $data['department'],
-            'lab_id'            => $data['department'] == 2 ? 'ai' : 'software',
+            'lab_id'            => Department::labId((int) $data['department']),
             'college'           => $data['college'],
             'major'             => $data['major'],
             'class_name'        => $data['class_name'],
@@ -203,7 +204,7 @@ class ApplicationService
             return SignApplication::create([
                 'student_id' => $studentId,
                 'status'     => 0,
-                'lab_id'     => ($data['department'] ?? 1) == 2 ? 'ai' : 'software',
+                'lab_id'     => Department::labId((int) ($data['department'] ?? 1)),
                 ...$data,
             ]);
         } catch (QueryException $e) {
@@ -227,7 +228,7 @@ class ApplicationService
     {
         $fillData = array_filter($data, fn($v) => $v !== null);
         if (isset($fillData['department'])) {
-            $fillData['lab_id'] = $fillData['department'] == 2 ? 'ai' : 'software';
+            $fillData['lab_id'] = Department::labId((int) $fillData['department']);
         }
         $application->fill($fillData);
         $application->save();
@@ -254,7 +255,7 @@ class ApplicationService
             'name'              => $application->name,
             'studentId'         => $application->student_id,
             'department'        => $application->department,
-            'departmentName'    => $application->department === 1 ? '软件开发实验室' : '人工智能实验室',
+            'departmentName'    => Department::name((int) $application->department),
             'college'           => $application->college,
             'major'             => $application->major,
             'className'         => $application->class_name,

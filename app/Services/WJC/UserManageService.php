@@ -11,6 +11,7 @@ use App\Models\SignApplication;
 use App\Models\CheckinRecord;
 use App\Helpers\PhoneHelper;
 use App\Models\SysAdmin;
+use App\Support\Department;
 use App\Traits\LogTrait;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -211,7 +212,7 @@ class UserManageService
             'real_name'  => $data['realName'],
             'phone'      => $data['phone'] ?? null,
             'email'      => $data['email'] ?? null,
-            'department' => $labId === 'ai' ? 2 : 1,
+            'department' => Department::id($labId),
             'lab_id'     => $labId,
             'status'     => 1,
         ]);
@@ -262,7 +263,7 @@ class UserManageService
                 'student_id'   => $u->student_id,
                 'name'         => $u->real_name,
                 'user_id'      => $u->user_id,
-                'department'   => $labId === 'ai' ? 2 : 1,
+                'department'   => Department::id($labId),
                 'college'      => $u->college,
                 'major'        => $u->major,
                 'class_name'   => $className,

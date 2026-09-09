@@ -9,6 +9,7 @@ use App\Helpers\PhoneHelper;
 use App\Models\SysAdmin;
 use App\Mail\VerificationCodeMail;
 use App\Models\VerifyCode;
+use App\Support\Department;
 use App\Traits\LogTrait;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -180,7 +181,7 @@ class AdminAuthService
             'adminName'   => $admin->admin_name,
             'realName'    => $admin->real_name,
             'labId'       => $labId,
-            'labName'     => $labId === 'ai' ? '人工智能实验室' : '软件开发实验室',
+            'labName'     => Department::nameByLabId($labId),
             'roles'       => ['admin'],
             'permissions' => [
                 'user:list', 'user:create', 'user:delete', 'user:update',
