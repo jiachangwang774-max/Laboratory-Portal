@@ -2,6 +2,7 @@
 
 namespace App\Services\WJC;
 
+use App\Enums\LabDepartment;
 use App\Enums\ResponseCode;
 use App\Exceptions\BusinessException;
 use App\Models\SignApplication;
@@ -75,7 +76,7 @@ class SignAuditService
             'name'             => $app->name,
             'studentId'        => $app->student_id,
             'department'       => $app->department,
-            'departmentText'   => $app->department == 1 ? '软件开发实验室' : '人工智能实验室',
+            'departmentText'   => LabDepartment::fromDepartmentId($app->department)?->label() ?? '',
             'college'          => $app->college,
             'major'            => $app->major,
             'className'        => $app->class_name,

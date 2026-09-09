@@ -25,6 +25,7 @@ class UserCreateRequest extends FormRequest
             'studentId' => [Rule::requiredIf($role === 'student'), 'string', 'max:20'],
             'password'  => ['nullable', 'string', new PasswordStrength()],
             'role'      => 'nullable|string|in:student,admin',
+            'labId'     => 'nullable|string|in:software,ai,coord_research,operations',
         ];
     }
 

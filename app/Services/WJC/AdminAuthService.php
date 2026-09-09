@@ -2,6 +2,7 @@
 
 namespace App\Services\WJC;
 
+use App\Enums\LabDepartment;
 use App\Enums\ResponseCode;
 use App\Enums\VerifyCodeType;
 use App\Exceptions\BusinessException;
@@ -174,13 +175,14 @@ class AdminAuthService
 
     private function formatAdmin(SysAdmin $admin): array
     {
-        $labId = $admin->lab_id ?: 'software';
+        $lab = LabDepartment::tryFrom($admin->lab_id ?? '') ?? LabDepartment::SOFTWARE;
+        $labId = $lab->value;
         return [
             'adminId'     => $admin->admin_id,
             'adminName'   => $admin->admin_name,
             'realName'    => $admin->real_name,
             'labId'       => $labId,
-            'labName'     => $labId === 'ai' ? '人工智能实验室' : '软件开发实验室',
+            'labName'     => $lab->label(),
             'roles'       => ['admin'],
             'permissions' => [
                 'user:list', 'user:create', 'user:delete', 'user:update',

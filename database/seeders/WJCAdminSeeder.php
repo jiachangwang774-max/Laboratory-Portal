@@ -38,6 +38,32 @@ class WJCAdminSeeder extends Seeder
             ]
         );
 
+        SysAdmin::firstOrCreate(
+            ['admin_name' => 'coord_admin'],
+            [
+                'password'   => Hash::make('Admin@123'),
+                'real_name'  => '协研发展部管理员',
+                'phone'      => '13900139002',
+                'email'      => 'coord@lab.com',
+                'department' => 3,
+                'lab_id'     => 'coord_research',
+                'status'     => 1,
+            ]
+        );
+
+        SysAdmin::firstOrCreate(
+            ['admin_name' => 'ops_admin'],
+            [
+                'password'   => Hash::make('Admin@123'),
+                'real_name'  => '综合运营部管理员',
+                'phone'      => '13900139003',
+                'email'      => 'ops@lab.com',
+                'department' => 4,
+                'lab_id'     => 'operations',
+                'status'     => 1,
+            ]
+        );
+
         // ===== 学员用户 =====
         $user1 = SysUser::firstOrCreate(
             ['username' => 'stu001'],
