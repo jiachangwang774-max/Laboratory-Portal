@@ -19,8 +19,13 @@ class SysAdmin extends Authenticatable implements JWTSubject
         'real_name',//真实姓名
         'phone',//手机号
         'email',//邮箱
+<<<<<<< Updated upstream
+        'department',//部门 1软件开发 2人工智能
+        'lab_id',//实验室 software/ai
+=======
         'department',//部门 1软件开发 2人工智能算法 3协研发展 4综合运营
-        'lab_id',//实验室 software/ai/research/operation
+        'lab_id',//实验室 software/ai/coord_research/operations
+>>>>>>> Stashed changes
         'status',//状态
     ];
 

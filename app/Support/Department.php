@@ -16,10 +16,10 @@ class Department
      * department => [lab_id, 名称]
      */
     public const MAP = [
-        1 => ['lab_id' => 'software',  'name' => '软件开发实验室'],
-        2 => ['lab_id' => 'ai',        'name' => '人工智能算法实验室'],
-        3 => ['lab_id' => 'research',  'name' => '协研发展部'],
-        4 => ['lab_id' => 'operation', 'name' => '综合运营部'],
+        1 => ['lab_id' => 'software',       'name' => '软件开发实验室'],
+        2 => ['lab_id' => 'ai',             'name' => '人工智能算法实验室'],
+        3 => ['lab_id' => 'coord_research', 'name' => '协研发展部'],
+        4 => ['lab_id' => 'operations',     'name' => '综合运营部'],
     ];
 
     public const DEFAULT_LAB_ID = 'software';
