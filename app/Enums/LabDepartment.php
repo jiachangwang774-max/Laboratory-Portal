@@ -29,7 +29,7 @@ enum LabDepartment: string
     {
         return match ($this) {
             self::SOFTWARE       => '软件开发实验室',
-            self::AI             => '人工智能实验室',
+            self::AI             => '人工智能算法实验室',
             self::COORD_RESEARCH => '协研发展部',
             self::OPERATIONS     => '综合运营部',
         };
